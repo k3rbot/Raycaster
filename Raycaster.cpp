@@ -7,17 +7,14 @@
 //-----------------------------MAP----------------------------------------------
 #define mapX  8      // Largeur de la carte (en tuiles)
 #define mapY  8      // Hauteur de la carte (en tuiles)
-#define squareSize 64      // Taille des tuiles de la carte
+#define tileSize 64      // Taille des tuiles de la carte
 
-// Taille de la fenêtre
 const int L = 1024;
 const int H = 512;
-
 int FOV = 60;  // Champ de vision
 float quality = 1.0;
 
-// La carte, un chiffre = une tuile, 1 = mur, 0 = vide
-int map[] = {
+int map[] = {          //the map array. Edit to change level but keep the outer walls
     1,1,1,1,1,1,1,1,
     1,0,1,0,0,0,0,1,
     1,0,1,0,0,0,0,1,
@@ -40,14 +37,14 @@ void drawMap2D() {
                 glColor3f(0, 0, 0);  // Couleur des carrés : noir
             }
 
-            squarePosX = x * squareSize;
-            squarePosY = y * squareSize;
+            squarePosX = x * tileSize;
+            squarePosY = y * tileSize;
             glBegin(GL_QUADS); // On indique que l'on va créer un quadrilatère$
             // On indique les coordonnées de chaque sommet du quadrilatère
             glVertex2i(0 + squarePosX + 1, 0 + squarePosY + 1);
-            glVertex2i(0 + squarePosX + 1, squareSize + squarePosY - 1);
-            glVertex2i(squareSize + squarePosX - 1, squareSize + squarePosY - 1);
-            glVertex2i(squareSize + squarePosX - 1, 0 + squarePosY + 1);
+            glVertex2i(0 + squarePosX + 1, tileSize + squarePosY - 1);
+            glVertex2i(tileSize + squarePosX - 1, tileSize + squarePosY - 1);
+            glVertex2i(tileSize + squarePosX - 1, 0 + squarePosY + 1);
             glEnd();  // On trace le quadrilatère
         }
     }
@@ -56,7 +53,7 @@ void drawMap2D() {
 
 //------------------------PLAYER------------------------------------------------
 float degToRad(int angle) {
-    return angle * M_PI / 180.0;  // Conversion des degrés en radians car les fonctions cos() et sin() accepte des angles en radians
+    return angle * M_PI / 180.0;  // Conversion degrés en radians car les fonctions cos() et sin() accepte des angles en radians
 }
 
 
@@ -71,7 +68,7 @@ float FixAng(float angle) {
     return angle;
 }
 
-float playerX,playerY,playerMoveDirectionX,playerMoveDirectionY,playerAngle;
+float playerX, playerY, playerMoveDirectionX, playerMoveDirectionY, playerAngle;
 
 void drawPlayer2D() {
     glColor3f(1, 1, 0);  // Couleur jaune
@@ -85,6 +82,77 @@ void drawPlayer2D() {
     glVertex2i(playerX, playerY);
     glVertex2i(playerX + playerMoveDirectionX * 20, playerY + playerMoveDirectionY * 20);
     glEnd();
+}
+
+void movePlayer(float x, float y) {
+    // On enregistre la future position du joueur si il n'y avait pas de mur
+    float nextX = playerX + x;
+    float nextY = playerY + y;
+
+    // On calcule la position du bloc le plus proche après déplacement dans map[]
+    int tileX = trunc(nextX / tileSize);
+    int tileY = trunc(nextY / tileSize);
+
+    int tileId = tileY * mapX + tileX;
+
+    // On regarde si le bloc est un mur
+    if (map[tileId] == 1) {
+        float collisionX = 0;
+        float collisionY = 0;
+
+        // On détermine la distance absolue au milieu du bloc sur les axes x et y
+        if (nextX - (tileSize * (tileX + 0.5)) < tileSize / 2) {
+            collisionX = tileSize / 2 - abs((tileSize * (tileX + 0.5)) - nextX);
+        }
+        if (nextY - (tileSize * (tileY + 0.5)) < tileSize / 2) {
+            collisionY = tileSize / 2 - abs((tileSize * (tileY + 0.5)) - nextY);
+        }
+
+        // On détermine si on est à droite/gauche ou en dessous/au dessus du bloc
+        if (collisionX < collisionY) {
+            // On détermine si on est à droite ou à gauche du bloc
+            if (nextX < tileSize * (tileX + 0.5)) {
+                nextX = tileSize * tileX - 1;
+            }
+            else {
+                nextX = tileSize * (tileX + 1) + 1;
+            }
+
+            int nextTileX = trunc(nextX / tileSize);
+            if (map[tileY * mapX +  nextTileX] == 1) {
+                std::cout << "x is a problem" << std::endl;
+                nextX -= x;
+            }
+
+        }
+        else {
+            // On détermine si on est au dessus ou en dessous du bloc
+            if (nextY < tileSize * (tileY + 0.5)) {
+                nextY = tileSize * tileY - 1;
+            }
+            else {
+                nextY = tileSize * (tileY + 1) + 1;
+            }
+        }
+
+        int nextTileX = trunc(nextX / tileSize);
+        int nextTileY = trunc(nextY / tileSize);
+        int currentTileX = trunc(playerX / tileSize);
+        int currentTileY = trunc(playerY / tileSize);
+
+        if (map[nextTileY * mapX + nextTileX] == 1) {
+            if (map[nextTileY * mapX +  currentTileX] == 1) {
+                nextY -= y;
+            }
+            if (map[currentTileY * mapX +  nextTileX] == 1) {
+                nextX -= x;
+            }
+        }
+    }
+
+    // On effectue les déplacements pour de vrai
+    playerX = nextX;
+    playerY = nextY;
 }
 
 void Buttons(unsigned char key, int x, int y) {
@@ -104,13 +172,11 @@ void Buttons(unsigned char key, int x, int y) {
     }
 
     if (key == 'z') {
-        playerX += playerMoveDirectionX * 5;
-        playerY += playerMoveDirectionY * 5;
+        movePlayer(playerMoveDirectionX * 5, playerMoveDirectionY * 5);
     }
 
     if (key == 's') {
-        playerX -= playerMoveDirectionX * 5;
-        playerY -= playerMoveDirectionY * 5;
+        movePlayer(-playerMoveDirectionX * 5, -playerMoveDirectionY * 5);
     }
     glutPostRedisplay();
 }
@@ -126,7 +192,7 @@ void drawRays2D() {
     int r, mx, my, mp, dof, side, nbRays;
     float vx, vy, rx, ry, ra, xo, yo, disV, disH, lineOff;
 
-    ra = FixAng(playerAngle + FOV/2);                                                              //ray set back 30 degrees
+    ra = FixAng(playerAngle + FOV / 2);                                                              //ray set back 30 degrees
     nbRays = int(FOV * quality);
     //Raycasting
     for (r = 0; r < nbRays; r++) {
@@ -225,7 +291,7 @@ void drawRays2D() {
         int ca = FixAng(playerAngle - ra);
         disH = disH * cos(degToRad(ca));
 
-        int lineH = (squareSize * 640) / (disH);
+        int lineH = (tileSize * 640) / (disH);
         if (lineH > 640) {  //line height and limit
             lineH = 640;
         }
