@@ -117,13 +117,6 @@ void movePlayer(float x, float y) {
             else {
                 nextX = tileSize * (tileX + 1) + 1;
             }
-
-            int nextTileX = trunc(nextX / tileSize);
-            if (map[tileY * mapX +  nextTileX] == 1) {
-                std::cout << "x is a problem" << std::endl;
-                nextX -= x;
-            }
-
         }
         else {
             // On détermine si on est au dessus ou en dessous du bloc
@@ -135,21 +128,19 @@ void movePlayer(float x, float y) {
             }
         }
 
-        int nextTileX = trunc(nextX / tileSize);
-        int nextTileY = trunc(nextY / tileSize);
-        int currentTileX = trunc(playerX / tileSize);
-        int currentTileY = trunc(playerY / tileSize);
+    int nextTileX = trunc(nextX / tileSize);
+    int nextTileY = trunc(nextY / tileSize);
 
-        if (map[nextTileY * mapX + nextTileX] == 1) {
-            if (map[nextTileY * mapX +  currentTileX] == 1) {
-                nextY -= y;
-            }
-            if (map[currentTileY * mapX +  nextTileX] == 1) {
-                nextX -= x;
-            }
+    if (map[nextTileY * mapX + nextTileX] == 1) {
+        if (map[nextTileY * mapX +  tileX] == 1) {
+            nextY -= y;
+        }
+        if (map[nextTileY * mapX +  tileX] == 1)  {
+            nextX -= x;
         }
     }
 
+    }
     // On effectue les déplacements pour de vrai
     playerX = nextX;
     playerY = nextY;
