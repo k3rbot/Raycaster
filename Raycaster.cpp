@@ -4,7 +4,7 @@
 #include <math.h>
 #include <iostream>
 
-//-----------------------------MAP----------------------------------------------
+//-----------------------------CARTE----------------------------------------------
 #define mapX  8      // Largeur de la carte (en tuiles)
 #define mapY  8      // Hauteur de la carte (en tuiles)
 #define tileSize 64      // Taille des tuiles de la carte
@@ -14,7 +14,7 @@ const int H = 512;
 int FOV = 60;  // Champ de vision
 float quality = 1.0;
 
-int map[] = {          //the map array. Edit to change level but keep the outer walls
+int map[] = {          // Carte
     1,1,1,1,1,1,1,1,
     1,0,1,0,0,0,0,1,
     1,0,1,0,0,0,0,1,
@@ -39,7 +39,7 @@ void drawMap2D() {
 
             squarePosX = x * tileSize;
             squarePosY = y * tileSize;
-            glBegin(GL_QUADS); // On indique que l'on va créer un quadrilatère$
+            glBegin(GL_QUADS); // On indique que l'on va créer un quadrilatère
             // On indique les coordonnées de chaque sommet du quadrilatère
             glVertex2i(0 + squarePosX + 1, 0 + squarePosY + 1);
             glVertex2i(0 + squarePosX + 1, tileSize + squarePosY - 1);
@@ -51,14 +51,14 @@ void drawMap2D() {
 }//-----------------------------------------------------------------------------
 
 
-//------------------------PLAYER------------------------------------------------
+//------------------------JOUEUR------------------------------------------------
 float degToRad(int angle) {
-    return angle * M_PI / 180.0;  // Conversion degrés en radians car les fonctions cos() et sin() accepte des angles en radians
+    return angle * M_PI / 180.0;  // Conversion degrés en radians car les fonctions cos() et sin() acceptent des angles en radians
 }
 
 
 float FixAng(float angle) {
-    // On fait en sorte que les angles 0° et 360° se suivent
+    // On remet à zéro l'angle quand on atteint les 360°
     if (angle > 359) {
         angle -= 360;
     }
@@ -71,7 +71,7 @@ float FixAng(float angle) {
 float playerX, playerY, playerMoveDirectionX, playerMoveDirectionY, playerAngle;
 
 void drawPlayer2D() {
-    glColor3f(1, 1, 0);  // Couleur jaune
+    glColor3f(1, 1, 0);  // Couleur du joueur (jaune)
     glPointSize(8);
     glLineWidth(4);
     glBegin(GL_POINTS);
@@ -169,42 +169,44 @@ void Buttons(unsigned char key, int x, int y) {
     if (key == 's') {
         movePlayer(-playerMoveDirectionX * 5, -playerMoveDirectionY * 5);
     }
-    glutPostRedisplay();
+    glutPostRedisplay();    // On actualise l'affichage
 }
 //-----------------------------------------------------------------------------
 
 
-//---------------------------Draw Rays and Walls--------------------------------
+//---------------------Affichage des rayon et des murs-------------------------
 float distance(float ax, float ay, float bx, float by, float ang) {
     return cos(degToRad(ang)) * (bx - ax) - sin(degToRad(ang)) * (by - ay);
 }
 
 void drawRays2D() {
-    int r, mx, my, mp, dof, side, nbRays;
+    int r, mx, my, mp, dof, side, nbRays, line_width;
     float vx, vy, rx, ry, ra, xo, yo, disV, disH, lineOff;
 
-    ra = FixAng(playerAngle + FOV / 2);                                                              //ray set back 30 degrees
-    nbRays = int(FOV * quality);
-    //Raycasting
+    ra = FixAng(playerAngle + FOV / 2);     // On trace le premier rayon en commençant à gauche et à un angle dépendant du champs de vision
+    nbRays = int(FOV * quality);    // Nombre de rayons à tracer en fonction du champs de vision et du niveau de détail voulu
+    line_width = 511 / nbRays;  // Epaisseur d'une ligne pour l'affichage "3d" dépendant du nombre de lignes à tracer
+
+    // Rayons
     for (r = 0; r < nbRays; r++) {
-        //----------Vertical rays----------
+        //----------Rayons verticaux----------
         dof = 0;
         side = 0;
         disV = 100000;
         float Tan = tan(degToRad(ra));
 
-        if (cos(degToRad(ra)) > 0.001) {  //looking left
+        if (cos(degToRad(ra)) > 0.001) {  // On regarde à gauche
             rx = (((int)playerX >> 6) << 6) + 64;
             ry = (playerX - rx) * Tan + playerY;
             xo = 64; yo = -xo * Tan;
         }
-        else if (cos(degToRad(ra)) < -0.001) {   //looking right
+        else if (cos(degToRad(ra)) < -0.001) {   // On regarde à droite
             rx = (((int)playerX >> 6) << 6) - 0.0001;
             ry = (playerX - rx) * Tan + playerY;
             xo = -64;
             yo = -xo * Tan;
         }
-        else {    //looking up or down. no hit 
+        else {    // On regarde pile en haut ou en bas, on ne toucheras donc jamais un mur vertical
             rx = playerX;
             ry = playerY;
             dof = 8;
@@ -214,11 +216,11 @@ void drawRays2D() {
             mx = (int)(rx) >> 6;
             my = (int)(ry) >> 6;
             mp = my * mapX + mx;
-            if (mp > 0 && mp < mapX * mapY && map[mp] == 1) {    //hit
+            if (mp > 0 && mp < mapX * mapY && map[mp] == 1) {    // Touché !
                 dof = 8;
                 disV = cos(degToRad(ra)) * (rx - playerX) - sin(degToRad(ra)) * (ry - playerY);
             }
-            else {    //check next horizontal
+            else {    // Pas de colision, on va voir à la prochaine intersection verticale
                 rx += xo;
                 ry += yo;
                 dof += 1;
@@ -227,22 +229,22 @@ void drawRays2D() {
         vx = rx;
         vy = ry;
 
-        //----------Horizontal rays----------
+        //----------Rayons horizontaux----------
         dof = 0;
         disH = 100000;
         Tan = 1.0 / Tan;
-        if (sin(degToRad(ra)) > 0.001) {  //looking up 
+        if (sin(degToRad(ra)) > 0.001) {  // On regarde en haut
             ry = (((int)playerY >> 6) << 6) - 0.0001;
             rx = (playerY - ry) * Tan + playerX;
             yo = -64; xo = -yo * Tan;
         }
-        else if (sin(degToRad(ra)) < -0.001) { //looking down
+        else if (sin(degToRad(ra)) < -0.001) { // On regarde en bas
             ry = (((int)playerY >> 6) << 6) + 64;
             rx = (playerY - ry) * Tan + playerX;
             yo = 64;
             xo = -yo * Tan;
         }
-        else {  //looking straight left or right
+        else {  // On regarde pile à droite ou à gauche, on ne toucheras donc jamais un mur horizontal
             rx = playerX;
             ry = playerY;
             dof = 8;
@@ -252,11 +254,11 @@ void drawRays2D() {
             mx = (int)(rx) >> 6;
             my = (int)(ry) >> 6;
             mp = my * mapX + mx;
-            if (mp > 0 && mp < mapX * mapY && map[mp] == 1) {   //hit
+            if (mp > 0 && mp < mapX * mapY && map[mp] == 1) {   // Touché !
                 dof = 8;
                 disH = cos(degToRad(ra)) * (rx - playerX) - sin(degToRad(ra)) * (ry - playerY);
             }
-            else {  //check next horizontal
+            else {  // Pas de colision, on va voir à la prochaine intersection horizontale
                 rx += xo;
                 ry += yo;
                 dof += 1;
@@ -264,60 +266,64 @@ void drawRays2D() {
         }
 
         glColor3f(0, 0.8, 0);
-        if (disV < disH) {  //horizontal hit first
+        if (disV < disH) {  // On a touché un mur vertical en premier
             rx = vx;
             ry = vy;
             disH = disV;
             glColor3f(0, 0.6, 0);
         }
 
-        //draw 2D ray
+        // On affiche les rayons en 2D sur la minimap
         glLineWidth(2);
         glBegin(GL_LINES);
         glVertex2i(playerX, playerY);
         glVertex2i(rx, ry);
         glEnd();
 
-        //fix fisheye 
+        // On règle le problème du "fisheye": les murs en face de nous nous apparaissent
+        // complètement distordus car sur les cotés les rayons sont plus long c'est pourquoi en veut tout réaplanir
         int ca = FixAng(playerAngle - ra);
         disH = disH * cos(degToRad(ca));
 
+        // On prépare l'affichage des lignes verticales représentant les rayons pour le joueur
         int lineH = (tileSize * 640) / (disH);
-        if (lineH > 640) {  //line height and limit
+        if (lineH > 640) {  // On indique une limite de taille pour les lignes
             lineH = 640;
         }
-        lineOff = 250 - lineH / 2; //line offset
+        lineOff = 256 - lineH / 2; // On centre les lignes sur l'axe vertical
 
-        //draw vertical wall
+        // On affiche les lignes verticales
         glLineWidth(1);
-        glBegin(GL_QUADS);
-        glVertex2f(r * 511 / nbRays + 512, lineOff);
-        glVertex2f(r * 511 / nbRays + 513 + 511 / nbRays, lineOff);
-        glVertex2f(r * 511 / nbRays + 513 + 511 / nbRays, lineH + lineOff);
-        glVertex2f(r * 511 / nbRays + 512, lineH + lineOff);
+        glBegin(GL_QUADS); // Quadrilatère
+        glVertex2f(r * line_width + 512, lineOff);  // 1er rayon en bas à gauche
+        glVertex2f((r + 1) * line_width + 513, lineOff);    // 2ème rayon en bas à droite
+        glVertex2f((r + 1) * line_width + 513, lineH + lineOff);    // 3ème en haut à droite
+        glVertex2f(r * line_width + 512, lineH + lineOff);  // 4ème rayon en haut à gauche
         glEnd();
 
-        ra = FixAng(ra - 1 / quality);    //go to next ray
+        ra = FixAng(ra - 1 / quality);    // On change l'angle pour le prochain rayon
     }
 }//-----------------------------------------------------------------------------
 
 
 void init() {
-    glClearColor(0.3, 0.3, 0.3, 0);
-    gluOrtho2D(0, L, H, 0);
+    glClearColor(0.3, 0.3, 0.3, 0); // On met la couleur du fond en gris
+    gluOrtho2D(0, L, H, 0); // On initialise une fenêtre de L largeur et H hauteur
+    // Position et angle initial du joueur
     playerX = 150;
     playerY = 400;
     playerAngle = 0;
+    // Directions pour la minimap
     playerMoveDirectionX = cos(degToRad(playerAngle));
     playerMoveDirectionY = -sin(degToRad(playerAngle));
 }
 
 void display() {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    drawMap2D();
-    drawPlayer2D();
-    drawRays2D();
-    glutSwapBuffers();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // On efface complètement l'écran en laissant la couleur de fond 
+    drawMap2D();    // On affiche la minimap
+    drawPlayer2D(); // On affiche le joueur sur la minimap
+    drawRays2D();   // On affiche la vision "3d"
+    glutSwapBuffers();  // On échange les buffers pour afficher sur l'écran ce que l'on vient de render
 }
 
 int main(int argc, char* argv[]) {
