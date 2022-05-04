@@ -3,16 +3,16 @@
 #include <gl/glut.h>
 #include <math.h>
 #include <iostream>
+using namespace std;
 
-//-----------------------------CARTE----------------------------------------------
-#define mapX  8      // Largeur de la carte (en tuiles)
-#define mapY  8      // Hauteur de la carte (en tuiles)
-#define tileSize 64      // Taille des tuiles de la carte
+#define MAPX  8      // Largeur de la carte (en tuiles)
+#define MAPY  8      // Hauteur de la carte (en tuiles)
+#define TILESIZE 64      // Taille des tuiles de la carte
 
 const int L = 1024;
 const int H = 512;
 int FOV = 60;  // Champ de vision
-float quality = 1.0;
+float quality = 10.0;
 
 int map[] = {          // Carte
     1,1,1,1,1,1,1,1,
@@ -27,38 +27,47 @@ int map[] = {          // Carte
 
 
 void drawMap2D() {
+    /*
+    Affichage de la minimap
+    */
+
     int x, y, squarePosX, squarePosY;
-    for (y = 0; y < mapY; y++) {
-        for (x = 0; x < mapX; x++) {
-            if (map[y * mapX + x] == 1) {
+    for (y = 0; y < MAPY; y++) {
+        for (x = 0; x < MAPX; x++) {
+            if (map[y * MAPX + x] == 1) {
                 glColor3f(1, 1, 1);  // Couleur des carrés : blanc
             }
             else {
                 glColor3f(0, 0, 0);  // Couleur des carrés : noir
             }
 
-            squarePosX = x * tileSize;
-            squarePosY = y * tileSize;
+            squarePosX = x * TILESIZE;
+            squarePosY = y * TILESIZE;
             glBegin(GL_QUADS); // On indique que l'on va créer un quadrilatère
             // On indique les coordonnées de chaque sommet du quadrilatère
             glVertex2i(0 + squarePosX + 1, 0 + squarePosY + 1);
-            glVertex2i(0 + squarePosX + 1, tileSize + squarePosY - 1);
-            glVertex2i(tileSize + squarePosX - 1, tileSize + squarePosY - 1);
-            glVertex2i(tileSize + squarePosX - 1, 0 + squarePosY + 1);
+            glVertex2i(0 + squarePosX + 1, TILESIZE + squarePosY - 1);
+            glVertex2i(TILESIZE + squarePosX - 1, TILESIZE + squarePosY - 1);
+            glVertex2i(TILESIZE + squarePosX - 1, 0 + squarePosY + 1);
             glEnd();  // On trace le quadrilatère
         }
     }
-}//-----------------------------------------------------------------------------
+}
 
 
-//------------------------JOUEUR------------------------------------------------
 float degToRad(int angle) {
-    return angle * M_PI / 180.0;  // Conversion degrés en radians car les fonctions cos() et sin() acceptent des angles en radians
+    /*
+    Conversion degrés en radians car les fonctions cos() et sin() acceptent des angles en radians
+    */
+    return angle * M_PI / 180.0;
 }
 
 
 float FixAng(float angle) {
-    // On remet à zéro l'angle quand on atteint les 360°
+    /*
+    Remise à zéro de l'angle quand on atteint les 360°
+    */
+
     if (angle > 359) {
         angle -= 360;
     }
@@ -71,6 +80,10 @@ float FixAng(float angle) {
 float playerX, playerY, playerMoveDirectionX, playerMoveDirectionY, playerAngle;
 
 void drawPlayer2D() {
+    /*
+    Affichage du joueur sur la minimap
+    */
+
     glColor3f(1, 1, 0);  // Couleur du joueur (jaune)
     glPointSize(8);
     glLineWidth(4);
@@ -90,10 +103,10 @@ void movePlayer(float x, float y) {
     float nextY = playerY + y;
 
     // On calcule la position du bloc le plus proche après déplacement dans map[]
-    int tileX = trunc(nextX / tileSize);
-    int tileY = trunc(nextY / tileSize);
+    int tileX = trunc(nextX / TILESIZE);
+    int tileY = trunc(nextY / TILESIZE);
 
-    int tileId = tileY * mapX + tileX;
+    int tileId = tileY * MAPX + tileX;
 
     // On regarde si le bloc est un mur
     if (map[tileId] == 1) {
@@ -101,41 +114,41 @@ void movePlayer(float x, float y) {
         float collisionY = 0;
 
         // On détermine la distance absolue au milieu du bloc sur les axes x et y
-        if (nextX - (tileSize * (tileX + 0.5)) < tileSize / 2) {
-            collisionX = tileSize / 2 - abs((tileSize * (tileX + 0.5)) - nextX);
+        if (nextX - (TILESIZE * (tileX + 0.5)) < TILESIZE / 2) {
+            collisionX = TILESIZE / 2 - abs((TILESIZE * (tileX + 0.5)) - nextX);
         }
-        if (nextY - (tileSize * (tileY + 0.5)) < tileSize / 2) {
-            collisionY = tileSize / 2 - abs((tileSize * (tileY + 0.5)) - nextY);
+        if (nextY - (TILESIZE * (tileY + 0.5)) < TILESIZE / 2) {
+            collisionY = TILESIZE / 2 - abs((TILESIZE * (tileY + 0.5)) - nextY);
         }
 
         // On détermine si on est à droite/gauche ou en dessous/au dessus du bloc
         if (collisionX < collisionY) {
             // On détermine si on est à droite ou à gauche du bloc
-            if (nextX < tileSize * (tileX + 0.5)) {
-                nextX = tileSize * tileX - 1;
+            if (nextX < TILESIZE * (tileX + 0.5)) {
+                nextX = TILESIZE * tileX - 1;
             }
             else {
-                nextX = tileSize * (tileX + 1) + 1;
+                nextX = TILESIZE * (tileX + 1) + 1;
             }
         }
         else {
             // On détermine si on est au dessus ou en dessous du bloc
-            if (nextY < tileSize * (tileY + 0.5)) {
-                nextY = tileSize * tileY - 1;
+            if (nextY < TILESIZE * (tileY + 0.5)) {
+                nextY = TILESIZE * tileY - 1;
             }
             else {
-                nextY = tileSize * (tileY + 1) + 1;
+                nextY = TILESIZE * (tileY + 1) + 1;
             }
         }
 
-    int nextTileX = trunc(nextX / tileSize);
-    int nextTileY = trunc(nextY / tileSize);
+    int nextTileX = trunc(nextX / TILESIZE);
+    int nextTileY = trunc(nextY / TILESIZE);
 
-    if (map[nextTileY * mapX + nextTileX] == 1) {
-        if (map[nextTileY * mapX +  tileX] == 1) {
+    if (map[nextTileY * MAPX + nextTileX] == 1) {
+        if (map[nextTileY * MAPX +  tileX] == 1) {
             nextY -= y;
         }
-        if (map[nextTileY * mapX +  tileX] == 1)  {
+        if (map[nextTileY * MAPX +  tileX] == 1)  {
             nextX -= x;
         }
     }
@@ -147,26 +160,29 @@ void movePlayer(float x, float y) {
 }
 
 void Buttons(unsigned char key, int x, int y) {
-    // On fait en sorte que les touches zqsd permettent de contrôler le joueur
-    if (key == 'q') {
+    /*
+    Gestion des inputs du joueur
+    */
+
+    if (key == 'q') {   // On tourne la vision du joueur vers la gauche
         playerAngle += 5;
         playerAngle = FixAng(playerAngle);
         playerMoveDirectionX = cos(degToRad(playerAngle));
         playerMoveDirectionY = -sin(degToRad(playerAngle));
     }
 
-    if (key == 'd') {
+    if (key == 'd') {   // On tourne la vision du joueur vers la droite
         playerAngle -= 5;
         playerAngle = FixAng(playerAngle);
         playerMoveDirectionX = cos(degToRad(playerAngle));
         playerMoveDirectionY = -sin(degToRad(playerAngle));
     }
 
-    if (key == 'z') {
+    if (key == 'z') {   // On avance le joueur
         movePlayer(playerMoveDirectionX * 5, playerMoveDirectionY * 5);
     }
 
-    if (key == 's') {
+    if (key == 's') {   // On recule le joueur
         movePlayer(-playerMoveDirectionX * 5, -playerMoveDirectionY * 5);
     }
     glutPostRedisplay();    // On actualise l'affichage
@@ -180,135 +196,155 @@ float distance(float ax, float ay, float bx, float by, float ang) {
 }
 
 void drawRays2D() {
-    int r, mx, my, mp, dof, side, nbRays, line_width;
-    float vx, vy, rx, ry, ra, xo, yo, disV, disH, lineOff;
+    /*
+    Affichage des rayons sur la minimap et la "3d"
+    */
 
-    ra = FixAng(playerAngle + FOV / 2);     // On trace le premier rayon en commençant à gauche et à un angle dépendant du champs de vision
-    nbRays = int(FOV * quality);    // Nombre de rayons à tracer en fonction du champs de vision et du niveau de détail voulu
-    line_width = 511 / nbRays;  // Epaisseur d'une ligne pour l'affichage "3d" dépendant du nombre de lignes à tracer
+    int mp, rayNb, wall, side, nbRays;
+    float verticalRayX, verticalRayY, rayX, rayY, rayAngle, xOffset, yOffset, mx, my, disV, disH, lineOff, Tan, lineWidth;
+
+    rayAngle = FixAng(playerAngle + FOV / 2);     // On trace le premier rayon en commençant à gauche et à un angle dépendant du champs de vision
+    nbRays = FOV * quality;    // Nombre de rayons à tracer en fonction du champs de vision et du niveau de détail voulu
+    lineWidth = 512.0 / nbRays;  // Epaisseur d'une ligne pour l'affichage "3d" dépendant du nombre de lignes à tracer
 
     // Rayons
-    for (r = 0; r < nbRays; r++) {
+    for (rayNb = 0; rayNb < nbRays; rayNb++) {
         //----------Rayons verticaux----------
-        dof = 0;
+        wall = 0;
         side = 0;
         disV = 100000;
-        float Tan = tan(degToRad(ra));
-
-        if (cos(degToRad(ra)) > 0.001) {  // On regarde à gauche
-            rx = (((int)playerX >> 6) << 6) + 64;
-            ry = (playerX - rx) * Tan + playerY;
-            xo = 64; yo = -xo * Tan;
+        Tan = tan(degToRad(rayAngle));
+        //cout << rayX << " - 1\n";
+        if (cos(degToRad(rayAngle)) > 0.001) {  // On regarde à gauche
+            rayX = (((int)playerX >> 6) << 6) + 64;
+            rayY = (playerX - rayX) * Tan + playerY;
+            xOffset = 64;
+            yOffset = -xOffset * Tan;
+            //cout << rayX << " - 2\n";
         }
-        else if (cos(degToRad(ra)) < -0.001) {   // On regarde à droite
-            rx = (((int)playerX >> 6) << 6) - 0.0001;
-            ry = (playerX - rx) * Tan + playerY;
-            xo = -64;
-            yo = -xo * Tan;
+        else if (cos(degToRad(rayAngle)) < -0.001) {   // On regarde à droite
+            rayX = (((int)playerX >> 6) << 6) - 0.0001;
+            rayY = (playerX - rayX) * Tan + playerY;
+            xOffset = -64;
+            yOffset = -xOffset * Tan;
+            //cout << rayX << " - 3\n";
         }
         else {    // On regarde pile en haut ou en bas, on ne toucheras donc jamais un mur vertical
-            rx = playerX;
-            ry = playerY;
-            dof = 8;
+            rayX = playerX;
+            rayY = playerY;
+            wall = MAPY;
+            //cout << rayX << " - 4\n";
         }
 
-        while (dof < 8) {
-            mx = (int)(rx) >> 6;
-            my = (int)(ry) >> 6;
-            mp = my * mapX + mx;
-            if (mp > 0 && mp < mapX * mapY && map[mp] == 1) {    // Touché !
-                dof = 8;
-                disV = cos(degToRad(ra)) * (rx - playerX) - sin(degToRad(ra)) * (ry - playerY);
+        while (wall < MAPY) {   // On teste tous les murs verticaux pour savoir si le rayon en touche un
+            mx = (int)(rayX) >> 6;
+            my = (int)(rayY) >> 6;
+            mp = my * MAPX + mx;
+            if (mp > 0 && mp < MAPX * MAPY && map[mp] == 1) {    // Touché !
+                disV = cos(degToRad(rayAngle)) * (rayX - playerX) - sin(degToRad(rayAngle)) * (rayY - playerY);
+                break;
             }
             else {    // Pas de colision, on va voir à la prochaine intersection verticale
-                rx += xo;
-                ry += yo;
-                dof += 1;
+                rayX += xOffset;
+                rayY += yOffset;
+                wall += 1;
             }
+            //cout << rayX << " - " << wall + 5 << '\n';
         }
-        vx = rx;
-        vy = ry;
+        verticalRayX = rayX;
+        verticalRayY = rayY;
 
         //----------Rayons horizontaux----------
-        dof = 0;
+        wall = 0;
         disH = 100000;
         Tan = 1.0 / Tan;
-        if (sin(degToRad(ra)) > 0.001) {  // On regarde en haut
-            ry = (((int)playerY >> 6) << 6) - 0.0001;
-            rx = (playerY - ry) * Tan + playerX;
-            yo = -64; xo = -yo * Tan;
+        if (sin(degToRad(rayAngle)) > 0.001) {  // On regarde en haut
+            rayY = (((int)playerY >> 6) << 6) - 0.0001;
+            rayX = (playerY - rayY) * Tan + playerX;
+            yOffset = -64;
+            xOffset = -yOffset * Tan;
+            //cout << rayX << " - 20\n";
         }
-        else if (sin(degToRad(ra)) < -0.001) { // On regarde en bas
-            ry = (((int)playerY >> 6) << 6) + 64;
-            rx = (playerY - ry) * Tan + playerX;
-            yo = 64;
-            xo = -yo * Tan;
+        else if (sin(degToRad(rayAngle)) < -0.001) { // On regarde en bas
+            rayY = (((int)playerY >> 6) << 6) + 64;
+            rayX = (playerY - rayY) * Tan + playerX;
+            yOffset = 64;
+            xOffset = -yOffset * Tan;
+            //cout << rayX << " - 21\n";
         }
         else {  // On regarde pile à droite ou à gauche, on ne toucheras donc jamais un mur horizontal
-            rx = playerX;
-            ry = playerY;
-            dof = 8;
+            rayX = playerX;
+            rayY = playerY;
+            wall = MAPX;
+            //cout << rayX << " - 22\n";
         }
 
-        while (dof < 8) {
-            mx = (int)(rx) >> 6;
-            my = (int)(ry) >> 6;
-            mp = my * mapX + mx;
-            if (mp > 0 && mp < mapX * mapY && map[mp] == 1) {   // Touché !
-                dof = 8;
-                disH = cos(degToRad(ra)) * (rx - playerX) - sin(degToRad(ra)) * (ry - playerY);
+        while (wall < MAPX) {   // On teste tous les murs horizontaux pour savoir si le rayon en touche un
+            mx = (int)(rayX) >> 6;
+            my = (int)(rayY) >> 6;
+            mp = my * MAPX + mx;
+            if (mp > 0 && mp < MAPX * MAPY && map[mp] == 1) {   // Touché !
+                disH = cos(degToRad(rayAngle)) * (rayX - playerX) - sin(degToRad(rayAngle)) * (rayY - playerY);
+                break;
             }
             else {  // Pas de colision, on va voir à la prochaine intersection horizontale
-                rx += xo;
-                ry += yo;
-                dof += 1;
+                rayX += xOffset;
+                rayY += yOffset;
+                wall += 1;
             }
+            //cout << rayX << " - " << wall + 23 << '\n';
         }
 
         glColor3f(0, 0.8, 0);
         if (disV < disH) {  // On a touché un mur vertical en premier
-            rx = vx;
-            ry = vy;
+            rayX = verticalRayX;
+            rayY = verticalRayY;
             disH = disV;
             glColor3f(0, 0.6, 0);
+            //cout << rayX << " - 30\n";
         }
 
         // On affiche les rayons en 2D sur la minimap
-        glLineWidth(2);
+        glLineWidth(1);
         glBegin(GL_LINES);
-        glVertex2i(playerX, playerY);
-        glVertex2i(rx, ry);
+        glVertex2f(playerX, playerY);
+        glVertex2f(rayX, rayY);
         glEnd();
+        //cout << rayX << " - " << rayY << '\n';
 
         // On règle le problème du "fisheye": les murs en face de nous nous apparaissent
         // complètement distordus car sur les cotés les rayons sont plus long c'est pourquoi en veut tout réaplanir
-        int ca = FixAng(playerAngle - ra);
+        int ca = FixAng(playerAngle - rayAngle);
         disH = disH * cos(degToRad(ca));
 
         // On prépare l'affichage des lignes verticales représentant les rayons pour le joueur
-        int lineH = (tileSize * 640) / (disH);
-        if (lineH > 640) {  // On indique une limite de taille pour les lignes
-            lineH = 640;
+        int lineH = (TILESIZE * 320) / (disH);
+        if (lineH > H) {  // On indique une limite de taille pour les lignes
+            lineH = H;
         }
-        lineOff = 256 - lineH / 2; // On centre les lignes sur l'axe vertical
+        lineOff = H / 2 - lineH / 2; // On centre les lignes sur l'axe vertical
 
         // On affiche les lignes verticales
         glLineWidth(1);
         glBegin(GL_QUADS); // Quadrilatère
-        glVertex2f(r * line_width + 512, lineOff);  // 1er rayon en bas à gauche
-        glVertex2f((r + 1) * line_width + 513, lineOff);    // 2ème rayon en bas à droite
-        glVertex2f((r + 1) * line_width + 513, lineH + lineOff);    // 3ème en haut à droite
-        glVertex2f(r * line_width + 512, lineH + lineOff);  // 4ème rayon en haut à gauche
+        glVertex2f(rayNb * lineWidth + 512, lineOff);  // 1er rayon en bas à gauche
+        glVertex2f((rayNb + 1) * lineWidth + 512, lineOff);    // 2ème rayon en bas à droite
+        glVertex2f((rayNb + 1) * lineWidth + 512, lineH + lineOff);    // 3ème en haut à droite
+        glVertex2f(rayNb * lineWidth + 512, lineH + lineOff);  // 4ème rayon en haut à gauche
         glEnd();
 
-        ra = FixAng(ra - 1 / quality);    // On change l'angle pour le prochain rayon
+        rayAngle = FixAng(rayAngle - 1 / quality);    // On change l'angle pour le prochain rayon
     }
-}//-----------------------------------------------------------------------------
+}
 
 
 void init() {
+    /*
+    Fonction exécutée au démarrage mettant en place l'environnement pour le joueur
+    */
+
     glClearColor(0.3, 0.3, 0.3, 0); // On met la couleur du fond en gris
-    gluOrtho2D(0, L, H, 0); // On initialise une fenêtre de L largeur et H hauteur
+    gluOrtho2D(0, L, H, 0); // On définit une surface pour afficher dessus
     // Position et angle initial du joueur
     playerX = 150;
     playerY = 400;
@@ -319,6 +355,10 @@ void init() {
 }
 
 void display() {
+    /*
+    Fonction exécutée à chaque rafraîchissement d'image
+    */
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // On efface complètement l'écran en laissant la couleur de fond 
     drawMap2D();    // On affiche la minimap
     drawPlayer2D(); // On affiche le joueur sur la minimap
@@ -327,13 +367,17 @@ void display() {
 }
 
 int main(int argc, char* argv[]) {
+    /*
+    Fonction principale se répétant à l'infini
+    */
+
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
-    glutInitWindowSize(1024, 510);
-    glutCreateWindow("Raycaster");
+    glutInitWindowSize(L, H);  // On initialise une fenêtre de L largeur et H hauteur
+    glutCreateWindow("Raycaster");  // On crée une fenêtre avec un titre
     init();
-    glutDisplayFunc(display);
-    glutKeyboardFunc(Buttons);
-    glutMainLoop();
+    glutDisplayFunc(display);   // On définit la fonction à appeler quand il faut rafraîchir l'écran
+    glutKeyboardFunc(Buttons);  // On définit la fonction à appeler quand on appuie sur le clavier
+    glutMainLoop();     // On laisse GLUT gérer la boucle principale
 }
 
