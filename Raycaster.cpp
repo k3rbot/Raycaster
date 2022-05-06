@@ -5,24 +5,34 @@
 #include <iostream>
 using namespace std;
 
-#define MAPX  8      // Largeur de la carte (en tuiles)
-#define MAPY  8      // Hauteur de la carte (en tuiles)
+#define MAPX  16      // Largeur de la carte (en tuiles)
+#define MAPY  16      // Hauteur de la carte (en tuiles)
 #define TILESIZE 64      // Taille des tuiles de la carte
 
-const int L = 1024;
-const int H = 512;
+const int L = 1024;     // Largeur de la fenêtre
+const int H = 512;  // Hauteur de la fenêtre
+const float minimapTileSizeRatioX = MAPX / 8;
+const float minimapTileSizeRatioY = MAPY / 8;
 int FOV = 60;  // Champ de vision
 float quality = 10.0;
 
 int map[] = {          // Carte
-    1,1,1,1,1,1,1,1,
-    1,0,1,0,0,0,0,1,
-    1,0,1,0,0,0,0,1,
-    1,0,1,0,0,0,0,1,
-    1,0,0,0,0,0,0,1,
-    1,0,0,0,0,1,0,1,
-    1,0,0,0,0,0,0,1,
-    1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,
+    1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,1,
+    1,0,1,0,0,0,0,0,0,0,0,0,1,0,0,1,
+    1,0,0,0,1,0,0,0,0,0,0,1,1,0,0,1,
+    1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,
+    1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,
+    1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,
+    1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+    1,0,1,0,0,0,0,0,0,0,0,1,0,0,0,1,
+    1,0,1,0,0,1,0,0,0,1,0,1,1,0,0,1,
+    1,0,1,0,0,0,0,0,0,0,1,1,1,0,0,1,
+    1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,
+    1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,
+    1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 };
 
 
@@ -31,7 +41,10 @@ void drawMap2D() {
     Affichage de la minimap
     */
 
-    int x, y, squarePosX, squarePosY;
+    int x, y, squarePosX, squarePosY, minimapTileX, minimapTileSizeY;
+    minimapTileX = L / 2 / MAPX;    // Largeur y d'une tuile sur la minimap
+    minimapTileSizeY = H / MAPY;    // Longueur x d'une tuile sur la minimap
+
     for (y = 0; y < MAPY; y++) {
         for (x = 0; x < MAPX; x++) {
             if (map[y * MAPX + x] == 1) {
@@ -41,21 +54,21 @@ void drawMap2D() {
                 glColor3f(0, 0, 0);  // Couleur des carrés : noir
             }
 
-            squarePosX = x * TILESIZE;
-            squarePosY = y * TILESIZE;
+            squarePosX = x * minimapTileX;
+            squarePosY = y * minimapTileSizeY;
             glBegin(GL_QUADS); // On indique que l'on va créer un quadrilatère
             // On indique les coordonnées de chaque sommet du quadrilatère
             glVertex2i(0 + squarePosX + 1, 0 + squarePosY + 1);
-            glVertex2i(0 + squarePosX + 1, TILESIZE + squarePosY - 1);
-            glVertex2i(TILESIZE + squarePosX - 1, TILESIZE + squarePosY - 1);
-            glVertex2i(TILESIZE + squarePosX - 1, 0 + squarePosY + 1);
+            glVertex2i(0 + squarePosX + 1, minimapTileSizeY + squarePosY - 1);
+            glVertex2i(minimapTileX + squarePosX - 1, minimapTileSizeY + squarePosY - 1);
+            glVertex2i(minimapTileX + squarePosX - 1, 0 + squarePosY + 1);
             glEnd();  // On trace le quadrilatère
         }
     }
 }
 
 
-float degToRad(int angle) {
+float degToRad(float angle) {
     /*
     Conversion degrés en radians car les fonctions cos() et sin() acceptent des angles en radians
     */
@@ -68,11 +81,11 @@ float FixAng(float angle) {
     Remise à zéro de l'angle quand on atteint les 360°
     */
 
-    if (angle > 359) {
-        angle -= 360;
+    if (angle > 359.0) {
+        angle -= 360.0;
     }
-    if (angle < 0) {
-        angle += 360;
+    if (angle < 0.0) {
+        angle += 360.0;
     }
     return angle;
 }
@@ -84,16 +97,16 @@ void drawPlayer2D() {
     Affichage du joueur sur la minimap
     */
 
-    glColor3f(1, 1, 0);  // Couleur du joueur (jaune)
+    glColor3f(1,1,0);  // Couleur du joueur (jaune)
     glPointSize(8);
     glLineWidth(4);
     glBegin(GL_POINTS);
-    glVertex2i(playerX, playerY);
+    glVertex2i(playerX / minimapTileSizeRatioX, playerY / minimapTileSizeRatioY);
     glEnd();
 
     glBegin(GL_LINES);
-    glVertex2i(playerX, playerY);
-    glVertex2i(playerX + playerMoveDirectionX * 20, playerY + playerMoveDirectionY * 20);
+    glVertex2i(playerX / minimapTileSizeRatioX, playerY / minimapTileSizeRatioY);
+    glVertex2i(playerX / minimapTileSizeRatioX + playerMoveDirectionX * 20, playerY / minimapTileSizeRatioY + playerMoveDirectionY * 20);
     glEnd();
 }
 
@@ -195,7 +208,7 @@ float distance(float ax, float ay, float bx, float by, float ang) {
     return cos(degToRad(ang)) * (bx - ax) - sin(degToRad(ang)) * (by - ay);
 }
 
-void drawRays2D() {
+void drawRays() {
     /*
     Affichage des rayons sur la minimap et la "3d"
     */
@@ -214,26 +227,22 @@ void drawRays2D() {
         side = 0;
         disV = 100000;
         Tan = tan(degToRad(rayAngle));
-        //cout << rayX << " - 1\n";
         if (cos(degToRad(rayAngle)) > 0.001) {  // On regarde à gauche
             rayX = (((int)playerX >> 6) << 6) + 64;
             rayY = (playerX - rayX) * Tan + playerY;
             xOffset = 64;
             yOffset = -xOffset * Tan;
-            //cout << rayX << " - 2\n";
         }
         else if (cos(degToRad(rayAngle)) < -0.001) {   // On regarde à droite
             rayX = (((int)playerX >> 6) << 6) - 0.0001;
             rayY = (playerX - rayX) * Tan + playerY;
             xOffset = -64;
             yOffset = -xOffset * Tan;
-            //cout << rayX << " - 3\n";
         }
         else {    // On regarde pile en haut ou en bas, on ne toucheras donc jamais un mur vertical
             rayX = playerX;
             rayY = playerY;
             wall = MAPY;
-            //cout << rayX << " - 4\n";
         }
 
         while (wall < MAPY) {   // On teste tous les murs verticaux pour savoir si le rayon en touche un
@@ -249,7 +258,6 @@ void drawRays2D() {
                 rayY += yOffset;
                 wall += 1;
             }
-            //cout << rayX << " - " << wall + 5 << '\n';
         }
         verticalRayX = rayX;
         verticalRayY = rayY;
@@ -263,20 +271,17 @@ void drawRays2D() {
             rayX = (playerY - rayY) * Tan + playerX;
             yOffset = -64;
             xOffset = -yOffset * Tan;
-            //cout << rayX << " - 20\n";
         }
         else if (sin(degToRad(rayAngle)) < -0.001) { // On regarde en bas
             rayY = (((int)playerY >> 6) << 6) + 64;
             rayX = (playerY - rayY) * Tan + playerX;
             yOffset = 64;
             xOffset = -yOffset * Tan;
-            //cout << rayX << " - 21\n";
         }
         else {  // On regarde pile à droite ou à gauche, on ne toucheras donc jamais un mur horizontal
             rayX = playerX;
             rayY = playerY;
             wall = MAPX;
-            //cout << rayX << " - 22\n";
         }
 
         while (wall < MAPX) {   // On teste tous les murs horizontaux pour savoir si le rayon en touche un
@@ -292,23 +297,21 @@ void drawRays2D() {
                 rayY += yOffset;
                 wall += 1;
             }
-            //cout << rayX << " - " << wall + 23 << '\n';
         }
 
-        glColor3f(0, 0.8, 0);
+        glColor3f(0.8, 0, 0);
         if (disV < disH) {  // On a touché un mur vertical en premier
             rayX = verticalRayX;
             rayY = verticalRayY;
             disH = disV;
-            glColor3f(0, 0.6, 0);
-            //cout << rayX << " - 30\n";
+            glColor3f(0.6, 0, 0);
         }
 
         // On affiche les rayons en 2D sur la minimap
         glLineWidth(1);
         glBegin(GL_LINES);
-        glVertex2f(playerX, playerY);
-        glVertex2f(rayX, rayY);
+        glVertex2f(playerX/ minimapTileSizeRatioX, playerY/ minimapTileSizeRatioY);
+        glVertex2f(rayX/ minimapTileSizeRatioX, rayY/ minimapTileSizeRatioY);
         glEnd();
         //cout << rayX << " - " << rayY << '\n';
 
@@ -362,7 +365,7 @@ void display() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // On efface complètement l'écran en laissant la couleur de fond 
     drawMap2D();    // On affiche la minimap
     drawPlayer2D(); // On affiche le joueur sur la minimap
-    drawRays2D();   // On affiche la vision "3d"
+    drawRays();   // On affiche la vision "3d"
     glutSwapBuffers();  // On échange les buffers pour afficher sur l'écran ce que l'on vient de render
 }
 
