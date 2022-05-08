@@ -15,6 +15,28 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Test\include\GL\freeglut.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Test\include\GL\freeglut_ext.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Test\include\GL\freeglut_std.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Test\include\GL\glut.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="bin\x64\freeglut.dll">
+      <Filter>Fichiers sources</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="bin\freeglut.dll">
+      <Filter>Fichiers sources</Filter>
+    </CopyFileToFolders>
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="Raycaster.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
