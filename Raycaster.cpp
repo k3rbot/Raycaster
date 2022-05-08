@@ -8,12 +8,14 @@ using namespace std;
 #define MAPX  16      // Largeur de la carte (en tuiles)
 #define MAPY  16      // Hauteur de la carte (en tuiles)
 #define TILESIZE 64      // Taille des tuiles de la carte
+#define TEXTUREWIDTH 32     // Largeur des textures (carrés)
+#define ONEDEG 0.0174532925199432957 // Un degré en radians (pour éviter des calculs inutiles)
 
 const int L = 1024;     // Largeur de la fenêtre
 const int H = 512;  // Hauteur de la fenêtre
 const float minimapTileSizeRatioX = MAPX / 8;   // Ratio pour avoir la minimap toujours de la même taille pour déterminer la taille des tuiles à afficher
 const float minimapTileSizeRatioY = MAPY / 8;
-int FOV = 60;  // Champ de vision
+int FOV = 60 ;  // Champ de vision
 float quality = 10.0;
 
 typedef struct {    // Gestion des entrées du joueur
@@ -21,7 +23,7 @@ typedef struct {    // Gestion des entrées du joueur
 } Buttonkeys;
 Buttonkeys Keys;
 
-int map[] = {          // Carte
+const int map[] = {          // Carte
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
     1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,
     1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,1,
@@ -38,6 +40,44 @@ int map[] = {          // Carte
     1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,
     1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+};
+
+const int wallTexture[] = {
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,
+
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,
+
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 1, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 1, 1, 1, 1, 1, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 1, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 1, 1, 1, 1, 1, 1,    0, 0, 0, 0, 0, 0, 0, 0
 };
 
 
@@ -73,24 +113,16 @@ void drawMap2D() {
 }
 
 
-float degToRad(float angle) {
+double overflowAngle(double angle) {
     /*
-    Conversion degrés en radians car les fonctions cos() et sin() acceptent des angles en radians
-    */
-    return angle * M_PI / 180.0;
-}
-
-
-float overflowAngle(float angle) {
-    /*
-    Remise à zéro de l'angle quand on atteint les 360°
+    Remise à zéro de l'angle quand on atteint les 2π radians
     */
 
-    if (angle > 359.0) {
-        angle -= 360.0;
+    if (angle > 2 * M_PI) {
+        angle -= 2 * M_PI;
     }
-    if (angle < 0.0) {
-        angle += 360.0;
+    else if (angle < 0) {
+        angle += 2 * M_PI;
     }
     return angle;
 }
@@ -156,7 +188,7 @@ float distance(float ax, float ay, float bx, float by, float ang) {
     /*
     Calcul de la distance entre deux points
     */
-    return cos(degToRad(ang)) * (bx - ax) - sin(degToRad(ang)) * (by - ay);
+    return cos(ang) * (bx - ax) - sin(ang) * (by - ay);
 }
 
 void drawRays() {
@@ -165,9 +197,10 @@ void drawRays() {
     */
 
     int mp, rayNb, wall, side, nbRays;
-    float verticalRayX, verticalRayY, rayX, rayY, rayAngle, xOffset, yOffset, mx, my, disV, disH, lineOff, Tan, lineWidth;
+    float verticalRayX, verticalRayY, rayX, rayY, xOffset, yOffset, mx, my, disV, disH, lineOffset, Tan, lineWidth;
+    double rayAngle;
 
-    rayAngle = overflowAngle(playerAngle + FOV / 2);     // On trace le premier rayon en commençant à gauche et à un angle dépendant du champs de vision
+    rayAngle = overflowAngle(playerAngle + (FOV / 2 * ONEDEG));     // On trace le premier rayon en commençant à gauche et à un angle dépendant du champs de vision
     nbRays = FOV * quality;    // Nombre de rayons à tracer en fonction du champs de vision et du niveau de détail voulu
     lineWidth = 512.0 / nbRays;  // Epaisseur d'une ligne pour l'affichage "3d" dépendant du nombre de lignes à tracer
 
@@ -177,14 +210,14 @@ void drawRays() {
         wall = 0;
         side = 0;
         disV = 100000;
-        Tan = tan(degToRad(rayAngle));
-        if (cos(degToRad(rayAngle)) > 0.001) {  // On regarde à gauche
+        Tan = tan(rayAngle);
+        if (cos(rayAngle) > 0.001) {  // On regarde à gauche
             rayX = (((int)playerX >> 6) << 6) + 64;
             rayY = (playerX - rayX) * Tan + playerY;
             xOffset = 64;
             yOffset = -xOffset * Tan;
         }
-        else if (cos(degToRad(rayAngle)) < -0.001) {   // On regarde à droite
+        else if (cos(rayAngle) < -0.001) {   // On regarde à droite
             rayX = (((int)playerX >> 6) << 6) - 0.0001;
             rayY = (playerX - rayX) * Tan + playerY;
             xOffset = -64;
@@ -201,7 +234,7 @@ void drawRays() {
             my = (int)(rayY) >> 6;
             mp = my * MAPX + mx;
             if (mp > 0 && mp < MAPX * MAPY && map[mp] == 1) {    // Touché !
-                disV = cos(degToRad(rayAngle)) * (rayX - playerX) - sin(degToRad(rayAngle)) * (rayY - playerY);
+                disV = cos(rayAngle) * (rayX - playerX) - sin(rayAngle) * (rayY - playerY);
                 break;
             }
             else {    // Pas de colision, on va voir à la prochaine intersection verticale
@@ -217,13 +250,13 @@ void drawRays() {
         wall = 0;
         disH = 100000;
         Tan = 1.0 / Tan;
-        if (sin(degToRad(rayAngle)) > 0.001) {  // On regarde en haut
+        if (sin(rayAngle) > 0.001) {  // On regarde en haut
             rayY = (((int)playerY >> 6) << 6) - 0.0001;
             rayX = (playerY - rayY) * Tan + playerX;
             yOffset = -64;
             xOffset = -yOffset * Tan;
         }
-        else if (sin(degToRad(rayAngle)) < -0.001) { // On regarde en bas
+        else if (sin(rayAngle) < -0.001) { // On regarde en bas
             rayY = (((int)playerY >> 6) << 6) + 64;
             rayX = (playerY - rayY) * Tan + playerX;
             yOffset = 64;
@@ -240,7 +273,7 @@ void drawRays() {
             my = (int)(rayY) >> 6;
             mp = my * MAPX + mx;
             if (mp > 0 && mp < MAPX * MAPY && map[mp] == 1) {   // Touché !
-                disH = cos(degToRad(rayAngle)) * (rayX - playerX) - sin(degToRad(rayAngle)) * (rayY - playerY);
+                disH = cos(rayAngle) * (rayX - playerX) - sin(rayAngle) * (rayY - playerY);
                 break;
             }
             else {  // Pas de colision, on va voir à la prochaine intersection horizontale
@@ -250,12 +283,14 @@ void drawRays() {
             }
         }
 
+        float shading = 1;
         glColor3f(0.8, 0, 0);
         if (disV < disH) {  // On a touché un mur vertical en premier
             rayX = verticalRayX;
             rayY = verticalRayY;
             disH = disV;
             glColor3f(0.6, 0, 0);
+            shading = 0.8;
         }
 
         // On affiche les rayons en 2D sur la minimap
@@ -267,27 +302,46 @@ void drawRays() {
         //cout << rayX << " - " << rayY << '\n';
 
         // On règle le problème du "fisheye": les murs en face de nous nous apparaissent
-        // complètement distordus car sur les cotés les rayons sont plus long c'est pourquoi en veut tout réaplanir
-        int ca = overflowAngle(playerAngle - rayAngle);
-        disH = disH * cos(degToRad(ca));
+        // complètement distordus car sur les cotés les rayons sont plus long
+        double ca = overflowAngle(playerAngle - rayAngle);
+        disH = disH * cos(ca);
 
         // On prépare l'affichage des lignes verticales représentant les rayons pour le joueur
-        int lineH = (TILESIZE * 320) / (disH);
+        int lineH = (TILESIZE * H) / disH;
+        float textureY_step = (float)TEXTUREWIDTH / lineH;
+        float textureOffset = 0;
         if (lineH > H) {  // On indique une limite de taille pour les lignes
+            textureOffset = (lineH - H) / 2.0;    // On veut centrer la texture sur le mur qu'on regarde quand on est très proche
             lineH = H;
         }
-        lineOff = H / 2 - lineH / 2; // On centre les lignes sur l'axe vertical
+        lineOffset = (H - lineH) / 2.0; // On centre les lignes sur l'axe vertical
 
-        // On affiche les lignes verticales
-        glLineWidth(1);
-        glBegin(GL_QUADS); // Quadrilatère
-        glVertex2f(rayNb * lineWidth + L/2, lineOff);  // 1er rayon en bas à gauche
-        glVertex2f((rayNb + 1) * lineWidth + L/2, lineOff);    // 2ème rayon en bas à droite
-        glVertex2f((rayNb + 1) * lineWidth + L/2, lineH + lineOff);    // 3ème en haut à droite
-        glVertex2f(rayNb * lineWidth + L/2, lineH + lineOff);  // 4ème rayon en haut à gauche
+        // On affiche les textures qui forment les murs "3d"
+        float textureY = textureY_step * textureOffset;     // On adapte la taille de la texture à la taille du mur
+        float textureX;
+        if (shading == 1) {  // On affiche un mur vertical
+            textureX = (int)(rayX / 2.0) % TEXTUREWIDTH;  // On récupère la bonne "bande" verticale de la texture à cet endroit du mur
+            if (rayAngle > M_PI) {  // On regarde vers le bas, on doit donc inverser les textures
+                textureX = TEXTUREWIDTH - textureX - 1;
+            }
+        }
+        else {  // On affiche un mur horizontal
+            textureX = (int)(rayY / 2.0) % TEXTUREWIDTH;
+            if (rayAngle > M_PI / 2 && rayAngle < (3.0 / 2.0 * M_PI)) {   // On regarde à droite, on doit donc inverser les textures
+                textureX = TEXTUREWIDTH - textureX - 1;
+            }
+        }
+        glPointSize(lineWidth);
+        glBegin(GL_POINTS);
+        for (int linePixelY = 0; linePixelY < lineH; linePixelY++) {
+            float color = wallTexture[(int)textureY * TEXTUREWIDTH + (int)textureX] * shading;
+            glColor3f(color, color, color);
+            glVertex2f(rayNb * lineWidth + L / 2, linePixelY + lineOffset);
+            textureY += textureY_step;        
+        };
         glEnd();
 
-        rayAngle = overflowAngle(rayAngle - 1 / quality);    // On change l'angle pour le prochain rayon
+        rayAngle = overflowAngle(rayAngle - (ONEDEG / quality));    // On change l'angle pour le prochain rayon
     }
 }
 
@@ -302,10 +356,10 @@ void init() {
     // Position et angle initial du joueur
     playerX = 150;
     playerY = 400;
-    playerAngle = 0;
+    playerAngle = M_PI;
     // Directions pour la minimap
-    playerDirectionX = cos(degToRad(playerAngle));
-    playerDirectionY = -sin(degToRad(playerAngle));
+    playerDirectionX = cos(playerAngle);
+    playerDirectionY = -sin(playerAngle);
 }
 
 float frame, frame2, fps;
@@ -322,16 +376,16 @@ void display() {
     
     // Gestion des inputs du joueur
     if (Keys.q == 1) {   // On tourne la vision du joueur vers la gauche
-        playerAngle += 0.15 * fps;  // La vitesse de mouvement dépends maintenant de la fréquence d'image
+        playerAngle += 0.003 * fps;  // La vitesse de mouvement dépends maintenant de la fréquence d'image
         playerAngle = overflowAngle(playerAngle);
-        playerDirectionX = cos(degToRad(playerAngle));
-        playerDirectionY = -sin(degToRad(playerAngle));
+        playerDirectionX = cos(playerAngle);
+        playerDirectionY = -sin(playerAngle);
     }
     if (Keys.d == 1) {   // On tourne la vision du joueur vers la droite
-        playerAngle -= 0.15 * fps;
+        playerAngle -= 0.003 * fps;
         playerAngle = overflowAngle(playerAngle);
-        playerDirectionX = cos(degToRad(playerAngle));
-        playerDirectionY = -sin(degToRad(playerAngle));
+        playerDirectionX = cos(playerAngle);
+        playerDirectionY = -sin(playerAngle);
     }
 
     int xOffset = 0;    // Marge contre le mur
