@@ -23,7 +23,7 @@ typedef struct {    // Gestion des entrées du joueur
 } Buttonkeys;
 Buttonkeys Keys;
 
-const int map[] = {          // Carte
+const int map[] = {          // Carte (1 = mur, 0 = vide)
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
     1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,
     1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,1,
@@ -42,7 +42,7 @@ const int map[] = {          // Carte
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 };
 
-const float wallTexture[] = {
+const float wallTexture[] = {  // Chaque groupe de 3 chiffre réprésente les valeurs RGB d'un pixel du mur sur une échelle de 0 à 1
     0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0,    0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1,    1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0,    1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1,
     0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0,    0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1,    1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0,    1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1,
     0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0,    0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1,    1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0,    1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1,
@@ -80,6 +80,10 @@ const float wallTexture[] = {
     0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1,    1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0,    1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1,    0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0
 };
 
+const int floorTexture[] = {
+    1,0,
+    0,1,
+};
 
 void drawMap2D() {
     /*
@@ -331,6 +335,10 @@ void drawRays() {
                 textureX = TEXTUREWIDTH - textureX - 1;
             }
         }
+
+        /*
+        Affichage des murs
+        */
         glPointSize(lineWidth);
         glBegin(GL_POINTS);
         for (int linePixelY = 0; linePixelY < lineH; linePixelY++) {
@@ -342,6 +350,30 @@ void drawRays() {
             textureY += textureY_step;        
         };
         glEnd();
+
+        /*
+        Affichage du sol
+        */
+        for (int y = lineOffset + lineH; y < H; y++)
+        {
+            glColor3f(1,1,1);
+            glBegin(GL_POINTS);
+            glVertex2i(rayNb * lineWidth + L/2, y);
+            glEnd();
+        }
+
+        /*
+        Affichage du plafond / ciel
+        */
+        for (int y = 0; y < lineOffset; y++)
+        {
+            glColor3f(0,1,1);
+            glBegin(GL_POINTS);
+            glVertex2i(rayNb * lineWidth + L/2, y);
+            glEnd();
+        }
+
+
 
         rayAngle = overflowAngle(rayAngle - (ONEDEG / quality));    // On change l'angle pour le prochain rayon
     }
