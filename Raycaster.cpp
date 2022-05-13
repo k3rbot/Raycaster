@@ -330,9 +330,9 @@ void drawRays() {
         */
         for (int y = lineOffset + lineH; y < H; y++)
         {
-            glColor3f(1,1,1);
+            glColor3f(0.8, 0.8, 0.8);
             glBegin(GL_POINTS);
-            glVertex2i(rayNb * lineWidth + L/2, y);
+            glVertex2i(rayNb * lineWidth, y);
             glEnd();
         }
 
@@ -343,7 +343,7 @@ void drawRays() {
         {
             glColor3f(0,1,1);
             glBegin(GL_POINTS);
-            glVertex2i(rayNb * lineWidth + L/2, y);
+            glVertex2i(rayNb * lineWidth, y);
             glEnd();
         }
 
