@@ -16,7 +16,7 @@ using namespace std;
 const int L = 1090;     // Largeur de la fenêtre
 const int H = 1024;  // Hauteur de la fenêtre
 int FOV = 60;  // Champ de vision
-float quality = 10.0;
+int quality = 10;
 float frame, frame2, fps;   // Variables utilisées plus tard pour l'ajustement de la vitesse en fonction des FPS
 const float magicNumber = 1 / (tan((FOV / 2) * M_PI / 180));   // https://jsantell.com/3d-projection/
 
@@ -401,14 +401,14 @@ void display() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // On efface complètement l'écran en laissant la couleur de fond
 
     // Affichage du ciel et du sol
-    glColor3f(0, 1, 1);
+    glColor3f(0, 0.5, 0.5);
     glBegin(GL_QUADS);
     glVertex2i(0, 0);
     glVertex2i(L, 0);
     glVertex2i(L, H / 2);
     glVertex2i(0, H / 2);
     glEnd();
-    glColor3f(0.8, 0.8, 0.8);
+    glColor3f(0.2, 0.2, 0.2);
     glBegin(GL_QUADS);
     glVertex2i(0, H / 2);
     glVertex2i(L, H / 2);
