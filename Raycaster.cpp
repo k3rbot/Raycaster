@@ -18,19 +18,20 @@ const int H = 1024;  // Hauteur de la fenêtre
 int FOV = 60;  // Champ de vision
 int quality = 10;
 float frame, frame2, fps;   // Variables utilisées plus tard pour l'ajustement de la vitesse en fonction des FPS
-const float magicNumber = 1 / (tan((FOV / 2) * M_PI / 180));   // https://jsantell.com/3d-projection/
+const float focalLength = 1 / (tan((FOV / 2) * M_PI / 180));   // https://jsantell.com/3d-projection/
 
 typedef struct {    // Caractéristiques du joueur
     float x, y, directionX, directionY, angle;
 } Players;
 Players Player;
 
+
 typedef struct {    // Structure conservant les infos des touches préssées
     int z, q, s, d;
 } Buttonkeys;
 Buttonkeys Keys;
 
-/*
+
 class Sprite {
 public:
     int state;
@@ -38,28 +39,29 @@ public:
     int x, y, z;
 
     void draw() {
-        float relativeXtoPlayer = x - Player.x;   // On récupère la distance relative du sprite par rapport au joueur pour l'afficher en fonction de cette dernière
-        float relativeYtoPlayer = y - Player.y;
+        float sx = x - Player.x;
+        float sy = y - Player.y;
+        float sz = z;
 
-        float cosPlayerAngle = cos(Player.angle);     // On fait tourner le sprite autour de son centre pour toujours le voir
-        float sinPlayerAngle = sin(Player.angle);
-        float tempX = relativeYtoPlayer * cosPlayerAngle + relativeXtoPlayer * sinPlayerAngle;
-        float tempY = relativeXtoPlayer * cosPlayerAngle - relativeYtoPlayer * sinPlayerAngle;
-        relativeXtoPlayer = tempX;
-        relativeYtoPlayer = tempY;
+        float CS = cos(Player.angle);
+        float SN = sin(Player.angle);
+        float a = sy * CS + sx * SN;
+        float b = sx * CS - sy * SN;
+        sx = a;
+        sy = b;
 
-        relativeXtoPlayer = (relativeXtoPlayer * magicNumber / relativeYtoPlayer) + 60;    // On convertit la position sur la map en position sur l'écran en utilisant une matrice de projection
-        relativeYtoPlayer = (z * magicNumber / relativeYtoPlayer) + 40;
-        cout << relativeXtoPlayer * MAPX << " -- " << relativeYtoPlayer * MAPY << '\n';
+        sx = (sx * 109.4 / sy) + (L / 8 / 2.0);
+        sy = (sz * 109.4 / sy) + (H / 8 / 2.0);
+
         glPointSize(8);
         glColor3f(1, 1, 0);
         glBegin(GL_POINTS);
-        glVertex2f(relativeXtoPlayer * MAPX, relativeYtoPlayer * MAPY);
+        glVertex2f(sx * 8, sy * 8);
         glEnd();
     }
 };
 Sprite KeySprite;
-*/
+
 
 const int map[] = {          // Carte (1 = mur, 0 = vide, 2 = porte)
     1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -323,12 +325,10 @@ void init() {
     Player.directionX = cos(Player.angle);
     Player.directionY = -sin(Player.angle);
 
-    /*
     KeySprite.state = 1;
     KeySprite.x = 1.5 * TILESIZE;
     KeySprite.y = 3 * TILESIZE;
     KeySprite.z = 20;
-    */
 }
 
 
@@ -418,11 +418,17 @@ void display() {
     glEnd();
     drawWalls();   // On affiche la vision "3d"
     glutPostRedisplay();
-    //KeySprite.draw();
+    KeySprite.draw();
     glutSwapBuffers();  // On échange les buffers pour afficher sur l'écran ce que l'on vient de render
 }
 
-void main(int argc, char* argv[]) {
+
+void resize(int l, int h) {
+    glutReshapeWindow(L, H);
+};
+
+
+int main(int argc, char* argv[]) {
     /*
     Fonction principale se répétant à l'infini
     */
@@ -435,6 +441,7 @@ void main(int argc, char* argv[]) {
     glutDisplayFunc(display);   // On définit la fonction à appeler quand il faut rafraîchir l'écran
     glutKeyboardFunc(buttonDown);  // On indique la fonction à appeler quand on appuie sur le clavier
     glutKeyboardUpFunc(buttonUp);   // Et celle quand on relache un bouton
+    glutReshapeFunc(resize);
     glutMainLoop();     // On laisse GLUT gérer la boucle principale
 }
 
