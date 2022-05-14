@@ -216,7 +216,7 @@ void buttonUp(unsigned char key, int x, int y) {
 }
 
 
-void drawRays() {
+void drawWalls() {
     /*
     On tire des rayons et on affiche l'environnement
     */
@@ -489,7 +489,7 @@ void display() {
     glVertex2i(0, H);
 
     glEnd();
-    drawRays();   // On affiche la vision "3d"
+    drawWalls();   // On affiche la vision "3d"
     glutPostRedisplay();
     //KeySprite.draw();
     glutSwapBuffers();  // On échange les buffers pour afficher sur l'écran ce que l'on vient de render
