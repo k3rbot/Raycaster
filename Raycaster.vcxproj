@@ -36,6 +36,9 @@
     <CopyFileToFolders Include="resources\doorTexture.pnm">
       <FileType>Document</FileType>
     </CopyFileToFolders>
+    <CopyFileToFolders Include="resources\wallTexture.pnm">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Raycaster.cpp" />
