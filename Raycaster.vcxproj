@@ -30,9 +30,9 @@
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="bin\freeglut.dll">
+    <None Include="bin\freeglut.dll">
       <FileType>Document</FileType>
-    </CopyFileToFolders>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Raycaster.cpp" />
