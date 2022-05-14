@@ -32,6 +32,9 @@
     <CopyFileToFolders Include="bin\x64\freeglut.dll">
       <Filter>Fichiers sources</Filter>
     </CopyFileToFolders>
+    <CopyFileToFolders Include="resources\doorTexture.pnm">
+      <Filter>Fichiers sources</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Raycaster.cpp">

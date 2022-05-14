@@ -33,6 +33,9 @@
     <None Include="bin\freeglut.dll">
       <FileType>Document</FileType>
     </None>
+    <CopyFileToFolders Include="resources\doorTexture.pnm">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Raycaster.cpp" />
