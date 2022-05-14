@@ -376,28 +376,6 @@ void drawRays() {
         };
         glEnd();
 
-        /*
-        Affichage du sol
-        */
-        for (int y = lineOffset + lineH; y < H; y++)
-        {
-            glColor3f(0.8, 0.8, 0.8);
-            glBegin(GL_POINTS);
-            glVertex2i(rayNb * lineWidth, y);
-            glEnd();
-        }
-
-        /*
-        Affichage du plafond / ciel
-        */
-        for (int y = 0; y < lineOffset; y++)
-        {
-            glColor3f(0, 1, 1);
-            glBegin(GL_POINTS);
-            glVertex2i(rayNb * lineWidth, y);
-            glEnd();
-        }
-
         rayAngle = overflowAngle(rayAngle - (ONEDEG / quality));    // On change l'angle pour le prochain rayon
     }
 }
@@ -408,7 +386,6 @@ void init() {
     Fonction exécutée au démarrage mettant en place l'environnement pour le joueur
     */
 
-    glClearColor(0.3, 0.3, 0.3, 0); // On met la couleur du fond en gris
     gluOrtho2D(0, L, H, 0); // On définit une surface pour afficher dessus
     // Position et angle initial du joueur
     Player.x = 150;
@@ -493,10 +470,26 @@ void display() {
             Player.y -= Player.directionY * 0.15 * fps;
         }
     }
-    glutPostRedisplay();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // On efface complètement l'écran en laissant la couleur de fond
+    
+    // Affichage du ciel et du sol
+    glColor3f(0, 1, 1);
+    glBegin(GL_QUADS);
+    glVertex2i(0, 0);
+    glVertex2i(L, 0);
+    glVertex2i(L, H / 2);
+    glVertex2i(0, H / 2);
+    glEnd();
+    glColor3f(0.8, 0.8, 0.8);
+    glBegin(GL_QUADS);
+    glVertex2i(0, H / 2);
+    glVertex2i(L, H / 2);
+    glVertex2i(L, H);
+    glVertex2i(0, H);
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // On efface complètement l'écran en laissant la couleur de fond 
+    glEnd();
     drawRays();   // On affiche la vision "3d"
+    glutPostRedisplay();
     //KeySprite.draw();
     glutSwapBuffers();  // On échange les buffers pour afficher sur l'écran ce que l'on vient de render
 }
