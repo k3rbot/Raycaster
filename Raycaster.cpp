@@ -242,7 +242,7 @@ void drawWalls() {
             rayY = verticalRayY;
             disH = disV;
             glColor3f(0.6, 0, 0);
-            shading = 0.8;
+            shading = 0.75;
             mx = (unsigned int)rayX >> 6;
             my = (unsigned int)rayY >> 6;
             mp = my * MAPX + mx;
