@@ -3,30 +3,36 @@
 #include <gl/glut.h>
 #include <math.h>
 #include <iostream>
-#include "resources/wallTexture.pnm"
-#include "resources/doorTexture.pnm"
+
+// Les deux fichiers sont de la forme const int [] = {RGB,RGB,RGB};
+#include "resources/wallTexture.pnm"    // Tableau contenant la texture d'un mur
+#include "resources/doorTexture.pnm"    // Tableau contenant la texture d'une porte
+
 using namespace std;
 
-#define MAPX  16      // Largeur de la carte (en tuiles)
-#define MAPY  16      // Hauteur de la carte (en tuiles)
-#define TILESIZE 64      // Taille des tuiles de la carte
-#define TEXTUREWIDTH 32     // Largeur des textures (carrés)
-#define ONEDEG 0.0174532925199432957 // Un degré en radians (pour éviter des calculs inutiles)
+#define MAPX  16                        // Largeur de la carte (en tuiles)
+#define MAPY  16                        // Hauteur de la carte (en tuiles)
+#define TILESIZE 64                     // Taille des tuiles de la carte
+#define TEXTUREWIDTH 32                 // Largeur des textures (carrés)
+#define ONEDEG 0.0174532925199432957    // Un radian
 
-const int L = 1090;     // Largeur de la fenêtre
-const int H = 1024;  // Hauteur de la fenêtre
-int FOV = 60;  // Champ de vision
-int quality = 10;
-float frame, frame2, fps;   // Variables utilisées plus tard pour l'ajustement de la vitesse en fonction des FPS
-const float focalLength = 1 / (tan((FOV / 2) * M_PI / 180));   // https://jsantell.com/3d-projection/
+const int L = 1090;                                             // Largeur de la fenêtre
+const int H = 1024;                                             // Hauteur de la fenêtre
+int FOV = 60;                                                   // Champ de vision en degré
+int quality = 10;                                               // Nombre de rayons par degré
+float frame, frame2, fps;                                       // Permet le calcul des images par seconde et la vitesse de déplacement du joueur
+const float focalLength = 1 / (tan((FOV / 2) * M_PI / 180));    // https://jsantell.com/3d-projection/
 
-typedef struct {    // Caractéristiques du joueur
+
+// Caractéristiques du joueur
+typedef struct {
     float x, y, directionX, directionY, angle;
 } Players;
 Players Player;
 
 
-typedef struct {    // Structure conservant les infos des touches préssées
+// Structure conservant les infos des touches pressées
+typedef struct {
     int z, q, s, d;
 } Buttonkeys;
 Buttonkeys Keys;
@@ -63,7 +69,8 @@ public:
 Sprite KeySprite;
 
 
-const int map[] = {          // Carte (1 = mur, 0 = vide, 2 = porte)
+// Carte du monde (0 = vide, 1 = mur, 2 = porte)
+const int map[] = {
     1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,
     1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,
     1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,
@@ -83,16 +90,17 @@ const int map[] = {          // Carte (1 = mur, 0 = vide, 2 = porte)
 };
 
 
+// Tableau de pointeurs contenant les adresses des tableaux contenant les textures du jeu
 const int* texturesArray[2] = {
         wallTexture,
         doorTexture
 };
 
 
+/*
+Mise en application du cercle trigonométrique
+*/
 double overflowAngle(double angle) {
-    /*
-    Remise à zéro de l'angle quand on atteint les 2π radians
-    */
 
     if (angle > 2 * M_PI) {
         angle -= 2 * M_PI;
@@ -103,7 +111,9 @@ double overflowAngle(double angle) {
     return angle;
 }
 
-
+/*
+Cette fonction permet de conctrôler le joueur lorsque ce dernier appuie sur une touche
+*/
 void buttonDown(unsigned char key, int x, int y) {
 
     if (key == 'z') {
@@ -122,7 +132,9 @@ void buttonDown(unsigned char key, int x, int y) {
     glutPostRedisplay();
 }
 
-
+/*
+Cette fonction permet de conctrôler le joueur lorsque ce dernier relâche sur une touche
+*/
 void buttonUp(unsigned char key, int x, int y) {
 
     if (key == 'z') {
@@ -142,110 +154,127 @@ void buttonUp(unsigned char key, int x, int y) {
 }
 
 
+/*
+Cette fonction calcule la position des murs vis-à-vis du joueur et affiche les murs à l'écran en conséquence.
+Pour ce faire, elle envoie des rayons virtuels, qui lorsque ils touchent un mur permettent de déterminer sa distance relative au joueur.
+*/
 void drawWalls() {
-    /*
-    On tire des rayons et on affiche l'environnement
-    */
-
     int rayNb, wall, side, nbRays;
-    unsigned int mx, my, mp;
+    unsigned int tileX, tileY, tileId;
     float verticalRayX, verticalRayY, rayX, rayY, xOffset, yOffset, disV, disH, lineOffset, Tan, lineWidth;
     double rayAngle;
 
-    rayAngle = overflowAngle(Player.angle + (FOV / 2 * ONEDEG));     // On trace le premier rayon en commençant à gauche et à un angle dépendant du champs de vision
-    nbRays = FOV * quality;    // Nombre de rayons à tracer en fonction du champs de vision et du niveau de détail voulu
-    lineWidth = (float)L / nbRays;  // Epaisseur d'une ligne pour l'affichage "3d" dépendant du nombre de lignes à tracer
+    rayAngle = overflowAngle(Player.angle + (FOV / 2 * ONEDEG));    // On trace le premier rayon en commençant à gauche et à un angle dépendant du champs de vision
+    nbRays = FOV * quality;                                         // Nombre de rayons à tracer en fonction du champs de vision et du niveau de détail voulu
+    lineWidth = (float)L / nbRays;                                  // Epaisseur d'une ligne pour l'affichage "3d" dépendant du nombre de lignes à tracer
 
     // Rayons
     for (rayNb = 0; rayNb < nbRays; rayNb++) {
-        //----------Rayons verticaux----------
+        // Envoi du rayon croisant les lignes verticales
         wall = 0;
         side = 0;
         disV = 100000;
         Tan = tan(rayAngle);
-        if (cos(rayAngle) > 0.001) {  // On regarde à gauche
+
+        // On regarde à droite
+        if (cos(rayAngle) > 0.001) {
+            // On fait des bitshifts pour pour arrondir la position du joueur à la ligne verticale sur sa gauche,
+            // puis on ajoute 64 pour obtenir l'abscisse de la ligne verticale à sa droite.
             rayX = (((int)Player.x >> 6) << 6) + 64;
             rayY = (Player.x - rayX) * Tan + Player.y;
             xOffset = 64;
             yOffset = -xOffset * Tan;
         }
-        else if (cos(rayAngle) < -0.001) {   // On regarde à droite
+        // On regarde à gauche
+        else if (cos(rayAngle) < -0.001) {
+            // On fait des bitshifts pour pour arrondir la position du joueur à la ligne verticale sur sa gauche,
+            // puis on retire une toute petit valeur pour tomber sur le bloc de gauche.
             rayX = (((int)Player.x >> 6) << 6) - 0.0001;
             rayY = (Player.x - rayX) * Tan + Player.y;
             xOffset = -64;
             yOffset = -xOffset * Tan;
         }
-        else {    // On regarde pile en haut ou en bas, on ne toucheras donc jamais un mur vertical
+        // On regarde à la verticale donc le rayon ne peut pas toucher une ligne verticale
+        else {
             rayX = Player.x;
             rayY = Player.y;
             wall = MAPY;
         }
 
-        while (wall < MAPY) {   // On teste tous les murs verticaux pour savoir si le rayon en touche un
-            mx = (unsigned int)rayX >> 6;
-            my = (unsigned int)rayY >> 6;
-            mp = my * MAPX + mx;
-            if (mp > 0 && mp < MAPX * MAPY && map[mp] > 0) {    // Touché !
+        // On teste tous les murs verticaux pour savoir si le rayon en touche un
+        while (wall < MAPY) {
+            tileX = (unsigned int)rayX >> 6;
+            tileY = (unsigned int)rayY >> 6;
+            tileId = tileY * MAPX + tileX;  // Position du mur dans la carte
+            // Touché !
+            if (tileId > 0 && tileId < MAPX * MAPY && map[tileId] > 0) {
+                // Calcule de la distance entre le joueur et le point de collision du rayon
                 disV = cos(rayAngle) * (rayX - Player.x) - sin(rayAngle) * (rayY - Player.y);
                 break;
             }
-            else {    // Pas de colision, on va voir à la prochaine intersection verticale
+            // Pas de colision, on va voir à la prochaine intersection verticale
+            else {
                 rayX += xOffset;
                 rayY += yOffset;
                 wall += 1;
             }
         }
+        // On sauvegarde les variables pour plus tard
         verticalRayX = rayX;
         verticalRayY = rayY;
 
-        //----------Rayons horizontaux----------
+        // Envoi du rayon croisant les lignes horizontales
+        // Les étapes sont les même que pour le rayon vertical
         wall = 0;
         disH = 100000;
         Tan = 1.0 / Tan;
-        if (sin(rayAngle) > 0.001) {  // On regarde en haut
+        if (sin(rayAngle) > 0.001) {
             rayY = (((int)Player.y >> 6) << 6) - 0.0001;
             rayX = (Player.y - rayY) * Tan + Player.x;
             yOffset = -64;
             xOffset = -yOffset * Tan;
         }
-        else if (sin(rayAngle) < -0.001) { // On regarde en bas
+        else if (sin(rayAngle) < -0.001) {
             rayY = (((int)Player.y >> 6) << 6) + 64;
             rayX = (Player.y - rayY) * Tan + Player.x;
             yOffset = 64;
             xOffset = -yOffset * Tan;
         }
-        else {  // On regarde pile à droite ou à gauche, on ne toucheras donc jamais un mur horizontal
+        else {
             rayX = Player.x;
             rayY = Player.y;
             wall = MAPX;
         }
 
-        while (wall < MAPX) {   // On teste tous les murs horizontaux pour savoir si le rayon en touche un
-            mx = (unsigned int)rayX >> 6;
-            my = (unsigned int)rayY >> 6;
-            mp = my * MAPX + mx;
-            if (mp > 0 && mp < MAPX * MAPY && map[mp] > 0) {   // Touché !
+        while (wall < MAPX) {
+            tileX = (unsigned int)rayX >> 6;
+            tileY = (unsigned int)rayY >> 6;
+            tileId = tileY * MAPX + tileX;  // Position du mur dans la carte
+            if (tileId > 0 && tileId < MAPX * MAPY && map[tileId] > 0) {
                 disH = cos(rayAngle) * (rayX - Player.x) - sin(rayAngle) * (rayY - Player.y);
                 break;
             }
-            else {  // Pas de colision, on va voir à la prochaine intersection horizontale
+            else {
                 rayX += xOffset;
                 rayY += yOffset;
                 wall += 1;
             }
         }
 
+
         float shading = 1;
         glColor3f(0.8, 0, 0);
-        if (disV < disH) {  // On a touché un mur vertical en premier
+        // On décide si il faut prendre compte du rayon vertical ou horizontal (on prend le plus court) pour afficher le mur
+        if (disV < disH) {
+            // Puisque les valeurs du rayons horizontal sont en mémoire, on ne les changes que si le rayon vertical est plus avantageux
             rayX = verticalRayX;
             rayY = verticalRayY;
             disH = disV;
             glColor3f(0.6, 0, 0);
             shading = 0.75;
-            mx = (unsigned int)rayX >> 6;
-            my = (unsigned int)rayY >> 6;
-            mp = my * MAPX + mx;
+            tileX = (unsigned int)rayX >> 6;
+            tileY = (unsigned int)rayY >> 6;
+            tileId = tileY * MAPX + tileX;  // Position du mur dans la carte
         }
 
         // On règle le problème du "fisheye": les murs en face de nous nous apparaissent
@@ -257,46 +286,59 @@ void drawWalls() {
         int lineH = (TILESIZE * H) / disH;
         float textureY_step = (float)TEXTUREWIDTH / lineH;
         float textureOffset = 0;
-        if (lineH > H) {  // On indique une limite de taille pour les lignes
-            textureOffset = (lineH - H) / 2.0;    // On veut centrer la texture sur le mur qu'on regarde quand on est très proche
+        // On indique une limite de taille pour les lignes
+        if (lineH > H) {
+            // On veut centrer la texture sur le mur qu'on regarde quand on est très proche
+            textureOffset = (lineH - H) / 2.0;
             lineH = H;
         }
-        lineOffset = (H - lineH) / 2.0; // On centre les lignes sur l'axe vertical
+        // On centre les lignes sur l'axe vertical
+        lineOffset = (H - lineH) / 2.0;
 
         // On affiche les textures qui forment les murs "3d"
         float textureY = textureY_step * textureOffset;     // On adapte la taille de la texture à la taille du mur
         float textureX;
-        if (shading == 1) {  // On affiche un mur vertical
-            textureX = (int)(rayX / 2.0) % TEXTUREWIDTH;  // On récupère la bonne "bande" verticale de la texture à cet endroit du mur
-            if (rayAngle > M_PI) {  // On regarde vers le bas, on doit donc inverser les textures
+        // On affiche un mur vertical
+        if (shading == 1) {
+            textureX = (int)(rayX / 2.0) % TEXTUREWIDTH;    // On récupère la bonne "bande" verticale de la texture à cet endroit du mur
+            // On regarde vers le bas, on doit donc inverser les textures
+            if (rayAngle > M_PI) {
                 textureX = TEXTUREWIDTH - textureX - 1;
             }
         }
-        else {  // On affiche un mur horizontal
+        // On affiche un mur horizontal
+        else {
             textureX = (int)(rayY / 2.0) % TEXTUREWIDTH;
-            if (rayAngle > M_PI / 2 && rayAngle < (3.0 / 2.0 * M_PI)) {   // On regarde à droite, on doit donc inverser les textures
+            // On regarde à droite, on doit donc inverser les textures
+            if (rayAngle > M_PI / 2 && rayAngle < (3.0 / 2.0 * M_PI)) {   
                 textureX = TEXTUREWIDTH - textureX - 1;
             }
         }
 
+
+        // Parfois le le mur choisi a une valeur abérrante, ou tombe sur un espace vide, donc on prend la texture de base des murs
         int texture;
-        if (mp > 0 && mp < (MAPX * MAPY)) {
-            if (map[mp] == 0) {
+        if (tileId > 0 && tileId < (MAPX * MAPY)) {
+            if (map[tileId] == 0) {
                 texture = 0;
             }
             else {
-                texture = map[mp] - 1;
+                texture = map[tileId] - 1;
             }
         }
         else {
             texture = 0;
         }
-        /*
-        Affichage des murs
-        */
+        
+
         glPointSize(lineWidth);
         glBegin(GL_POINTS);
+
         for (int linePixelY = 0; linePixelY < lineH; linePixelY++) {
+            // On accède à l'adresse contenant la texture désirée pour l'afficher.
+            // Pour ce faire on accède à l'adresse de la première valeur du tableau contenant la texture grâce à notre tableau de pointeurs.
+            // Ensuite on ajoute le nombre correspondant à l'indice du pixel de la texture dans le tableau pour atteindre son adresse et on utilise l'opérateur * pour accéder à la variable par sa mémoire.
+            // Le compileur s'occupe de multiplier l'indice par la taille d'un élément, ici 4 octets pour un tableau int[]
             int red = *(texturesArray[texture] + (((int)textureY * TEXTUREWIDTH + (int)textureX) * 3)) * shading;
             int green = *(texturesArray[texture] + (((int)textureY * TEXTUREWIDTH + (int)textureX) * 3 + 1)) * shading;
             int blue = *(texturesArray[texture] + (((int)textureY * TEXTUREWIDTH + (int)textureX) * 3 + 2)) * shading;
@@ -304,6 +346,7 @@ void drawWalls() {
             glVertex2f(rayNb * lineWidth, linePixelY + lineOffset);
             textureY += textureY_step;
         };
+
         glEnd();
 
         rayAngle = overflowAngle(rayAngle - (ONEDEG / quality));    // On change l'angle pour le prochain rayon
@@ -311,11 +354,10 @@ void drawWalls() {
 }
 
 
+/*
+Fonction exécutée au démarrage mettant en place l'environnement pour le joueur
+*/
 void init() {
-    /*
-    Fonction exécutée au démarrage mettant en place l'environnement pour le joueur
-    */
-
     gluOrtho2D(0, L, H, 0); // On définit une surface pour afficher dessus
     // Position et angle initial du joueur
     Player.x = 150;
@@ -332,10 +374,11 @@ void init() {
 }
 
 
+/*
+Fonction exécutée à chaque rafraîchissemen
+*/
 void display() {
-    /*
-    Fonction exécutée à chaque rafraîchissement d'image
-    */
+    
 
     // Récuperation du nombre d'images par seconde
     frame2 = glutGet(GLUT_ELAPSED_TIME);
@@ -343,28 +386,31 @@ void display() {
     frame = glutGet(GLUT_ELAPSED_TIME);
 
     // Gestion des inputs du joueur
-    if (Keys.q == 1) {   // On tourne la vision du joueur vers la gauche
-        Player.angle += 0.0015 * fps;  // La vitesse de mouvement dépends maintenant de la fréquence d'image
+    // On tourne la vision du joueur vers la gauche
+    if (Keys.q == 1) {
+        Player.angle += 0.0015 * fps;   // La vitesse de mouvement dépends de la fréquence d'image
         Player.angle = overflowAngle(Player.angle);
         Player.directionX = cos(Player.angle);
         Player.directionY = -sin(Player.angle);
     }
-    if (Keys.d == 1) {   // On tourne la vision du joueur vers la droite
-        Player.angle -= 0.0015 * fps;
+    // On tourne la vision du joueur vers la droite
+    if (Keys.d == 1) {
+        Player.angle -= 0.0015 * fps;   // La vitesse de mouvement dépends de la fréquence d'image
         Player.angle = overflowAngle(Player.angle);
         Player.directionX = cos(Player.angle);
         Player.directionY = -sin(Player.angle);
     }
 
-    int xOffset = 0;    // Marge contre le mur
-    int yOffset = 0;
+    int xOffset, yOffset;    // Marge contre les murs
 
-    if (Player.directionX < 0) { // Si on est en bas de la map
+    // Si on recule
+    if (Player.directionX < 0) {
         xOffset = -20;
     }
     else {
         xOffset = 20;
     }
+    // Si on recule
     if (Player.directionY < 0) {
         yOffset = -20;
     }
@@ -372,35 +418,39 @@ void display() {
         yOffset = 20;
     }
 
-    // On veut savoir si le block situé devant nous est un mur on enregistre donc notre position
-    // dans la map avec le décalage
-    int gridPlayerPosX = Player.x / 64.0;
-    int gridPlayerPosX_add_xOffset = (Player.x + xOffset) / 64.0;
-    int gridPlayerPosX_sub_xOffset = (Player.x - xOffset) / 64.0;
-    int gridPlayerPosY = Player.y / 64.0;
-    int gridPlayerPosY_add_yOffset = (Player.y + yOffset) / 64.0;
-    int gridPlayerPosY_sub_yOffset = (Player.y - yOffset) / 64.0;
 
-    if (Keys.z == 1) {   // On avance le joueur
+    // On veut savoir si le block situé devant nous est un mur on enregistre donc notre position dans la map avec le décalage
+    int mapPlayerPosX = Player.x / TILESIZE;
+    int mapPlayerPosX_add_xOffset = (Player.x + xOffset) / TILESIZE;
+    int mapPlayerPosX_sub_xOffset = (Player.x - xOffset) / TILESIZE;
+    int mapPlayerPosY = Player.y / TILESIZE;
+    int mapPlayerPosY_add_yOffset = (Player.y + yOffset) / TILESIZE;
+    int mapPlayerPosY_sub_yOffset = (Player.y - yOffset) / TILESIZE;
+
+
+    // On avance le joueur
+    if (Keys.z == 1) {
         // Si la position du joueur dans la map avec le décalage ne correspond pas à un mur on peut avancer
-        if (map[gridPlayerPosY * MAPX + gridPlayerPosX_add_xOffset] == 0) {
+        if (map[mapPlayerPosY * MAPX + mapPlayerPosX_add_xOffset] == 0) {
             Player.x += Player.directionX * 0.15 * fps;
         }
-        if (map[gridPlayerPosY_add_yOffset * MAPX + gridPlayerPosX] == 0) {
+        if (map[mapPlayerPosY_add_yOffset * MAPX + mapPlayerPosX] == 0) {
             Player.y += Player.directionY * 0.15 * fps;
         }
     }
-    if (Keys.s == 1) {   // On recule le joueur
-        if (map[gridPlayerPosY * MAPX + gridPlayerPosX_sub_xOffset] == 0) {
+    // On recule le joueur
+    if (Keys.s == 1) {
+        // Si la position du joueur dans la map avec le décalage ne correspond pas à un mur on peut reculer
+        if (map[mapPlayerPosY * MAPX + mapPlayerPosX_sub_xOffset] == 0) {
             Player.x -= Player.directionX * 0.15 * fps;
         }
-        if (map[gridPlayerPosY_sub_yOffset * MAPX + gridPlayerPosX] == 0) {
+        if (map[mapPlayerPosY_sub_yOffset * MAPX + mapPlayerPosX] == 0) {
             Player.y -= Player.directionY * 0.15 * fps;
         }
     }
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // On efface complètement l'écran en laissant la couleur de fond
 
-    // Affichage du ciel et du sol
+    // Affichage du ciel et du sol (on fait deux rectangles)
     glColor3f(0, 0.5, 0.5);
     glBegin(GL_QUADS);
     glVertex2i(0, 0);
@@ -416,32 +466,32 @@ void display() {
     glVertex2i(0, H);
 
     glEnd();
-    drawWalls();   // On affiche la vision "3d"
+    drawWalls();            // On affiche la vision "3d"
     glutPostRedisplay();
     KeySprite.draw();
-    glutSwapBuffers();  // On échange les buffers pour afficher sur l'écran ce que l'on vient de render
+    glutSwapBuffers();      // On envoie l'image au processeur graphique
 }
 
-
+/*
+On garde les proportion parfaites de notre jeu
+*/
 void resize(int l, int h) {
     glutReshapeWindow(L, H);
 };
 
-
+/*
+Point d'entrée du programme
+*/
 int main(int argc, char* argv[]) {
-    /*
-    Fonction principale se répétant à l'infini
-    */
-
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
-    glutInitWindowSize(L, H);  // On initialise une fenêtre de L largeur et H hauteur
-    glutCreateWindow("Raycaster");  // On crée une fenêtre avec un titre
+    glutInitWindowSize(L, H);                       // On initialise une fenêtre de L largeur et H hauteur
+    glutCreateWindow("Raycaster");                  // On crée une fenêtre avec un titre
     init();
-    glutDisplayFunc(display);   // On définit la fonction à appeler quand il faut rafraîchir l'écran
-    glutKeyboardFunc(buttonDown);  // On indique la fonction à appeler quand on appuie sur le clavier
-    glutKeyboardUpFunc(buttonUp);   // Et celle quand on relache un bouton
+    glutDisplayFunc(display);                       // On définit la fonction à appeler quand il faut rafraîchir l'écran
+    glutKeyboardFunc(buttonDown);                   // On indique la fonction à appeler quand on appuie sur le clavier
+    glutKeyboardUpFunc(buttonUp);                   // Et celle quand on relache un bouton
     glutReshapeFunc(resize);
-    glutMainLoop();     // On laisse GLUT gérer la boucle principale
+    glutMainLoop();                                 // On laisse GLUT gérer la boucle principale
 }
 
