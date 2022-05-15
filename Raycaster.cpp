@@ -513,7 +513,7 @@ void display() {
                 Message.duration = 250;
             }
             // Si on a déjà récupéré la clé et qu'on se trouve près d'une porte, on l(ouvre
-            else if (!KeySprite.visible && (map[int((Player.y + 5 * yOffset) / TILESIZE) * MAPX + mapPlayerPosX] == 2 || map[mapPlayerPosY * MAPX + int((Player.x + 5 * xOffset) / TILESIZE)] == 2)) {
+            else if (!KeySprite.visible && (map[int((Player.y + 100 * Player.directionY) / TILESIZE) * MAPX + int((Player.x + 100 * Player.directionX) / TILESIZE)] == 2)) {
                 gameState = 2;  // On affiche 
             }
         }
