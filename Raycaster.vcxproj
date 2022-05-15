@@ -25,15 +25,13 @@
     <ClInclude Include="..\..\Test\include\GL\glut.h" />
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="bin\x64\freeglut.dll">
+    <CopyFileToFolders Include="resources\doorTexture.pnm">
       <FileType>Document</FileType>
     </CopyFileToFolders>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="bin\freeglut.dll">
+    <CopyFileToFolders Include="resources\end.pnm">
       <FileType>Document</FileType>
-    </None>
-    <CopyFileToFolders Include="resources\doorTexture.pnm">
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="resources\keyTexture.pnm">
       <FileType>Document</FileType>
     </CopyFileToFolders>
     <CopyFileToFolders Include="resources\wallTexture.pnm">
@@ -42,6 +40,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Raycaster.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="bin\x64\freeglut.dll">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

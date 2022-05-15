@@ -29,24 +29,25 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="bin\x64\freeglut.dll">
-      <Filter>Fichiers sources</Filter>
-    </CopyFileToFolders>
     <CopyFileToFolders Include="resources\doorTexture.pnm">
-      <Filter>Fichiers sources</Filter>
+      <Filter>Fichiers de ressources</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="resources\end.pnm">
+      <Filter>Fichiers de ressources</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="resources\keyTexture.pnm">
+      <Filter>Fichiers de ressources</Filter>
     </CopyFileToFolders>
     <CopyFileToFolders Include="resources\wallTexture.pnm">
-      <Filter>Fichiers sources</Filter>
+      <Filter>Fichiers de ressources</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="bin\x64\freeglut.dll">
+      <Filter>Fichiers de ressources</Filter>
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Raycaster.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="bin\freeglut.dll">
-      <Filter>Fichiers sources</Filter>
-    </None>
   </ItemGroup>
 </Project>
