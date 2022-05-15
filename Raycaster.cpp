@@ -7,6 +7,8 @@
 // Les deux fichiers sont de la forme const int [] = {RGB,RGB,RGB};
 #include "resources/wallTexture.pnm"    // Tableau contenant la texture d'un mur
 #include "resources/doorTexture.pnm"    // Tableau contenant la texture d'une porte
+#include "resources/keyTexture.pnm"     // Tableau contenant la texture d'une clé
+#include "resources/end.pnm"
 
 using namespace std;
 
@@ -16,57 +18,20 @@ using namespace std;
 #define TEXTUREWIDTH 32                 // Largeur des textures (carrés)
 #define ONEDEG 0.0174532925199432957    // Un radian
 
-const int L = 1090;                                             // Largeur de la fenêtre
-const int H = 1024;                                             // Hauteur de la fenêtre
-int FOV = 60;                                                   // Champ de vision en degré
-int quality = 10;                                               // Nombre de rayons par degré
-float frame, frame2, fps;                                       // Permet le calcul des images par seconde et la vitesse de déplacement du joueur
-const float focalLength = 1 / (tan((FOV / 2) * M_PI / 180));    // https://jsantell.com/3d-projection/
+const int L = 1090;                                                     // Largeur de la fenêtre
+const int H = 1024;                                                     // Hauteur de la fenêtre
 
+const int FOV = 60;                                                     // Champ de vision en degré
+const int quality = 10;
+int depth[FOV * quality];                                               // Taille de chaque rayon
+const int nbRays = FOV * quality;                                       // Nombre de rayons par degré
+const float lineWidth = (float)L / nbRays;                              // Epaisseur d'une ligne pour l'affichage "3d" dépendant du nombre de lignes à tracer
 
-// Caractéristiques du joueur
-typedef struct {
-    float x, y, directionX, directionY, angle;
-} Players;
-Players Player;
+float frame, frame2, fps;                                               // Permet le calcul des images par seconde et la vitesse de déplacement du joueur
 
+const float focalLength = 1 / tan(FOV / 2 * M_PI / 180) * 180 / M_PI;    // https://jsantell.com/3d-projection/
 
-// Structure conservant les infos des touches pressées
-typedef struct {
-    int z, q, s, d;
-} Buttonkeys;
-Buttonkeys Keys;
-
-
-class Sprite {
-public:
-    int state;
-    int map;
-    int x, y, z;
-
-    void draw() {
-        float sx = x - Player.x;
-        float sy = y - Player.y;
-        float sz = z;
-
-        float CS = cos(Player.angle);
-        float SN = sin(Player.angle);
-        float a = sy * CS + sx * SN;
-        float b = sx * CS - sy * SN;
-        sx = a;
-        sy = b;
-
-        sx = (sx * 109.4 / sy) + (L / 8 / 2.0);
-        sy = (sz * 109.4 / sy) + (H / 8 / 2.0);
-
-        glPointSize(8);
-        glColor3f(1, 1, 0);
-        glBegin(GL_POINTS);
-        glVertex2f(sx * 8, sy * 8);
-        glEnd();
-    }
-};
-Sprite KeySprite;
+int gameState = 1;                                                      // Différents états du jeu : 1 = en train de jouer, 2 : écran de fin
 
 
 // Carte du monde (0 = vide, 1 = mur, 2 = porte)
@@ -76,7 +41,7 @@ const int map[] = {
     1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,
     1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,
     1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,
-    1,0,0,0,0,1,0,1,0,0,0,1,0,0,0,1,
+    1,0,0,0,0,2,0,1,0,0,0,1,0,0,0,1,
     1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,
     1,0,0,0,0,1,1,1,1,1,1,1,0,0,0,1,
     1,0,0,0,0,1,0,0,1,0,0,0,0,0,0,1,
@@ -89,12 +54,92 @@ const int map[] = {
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 };
 
-
 // Tableau de pointeurs contenant les adresses des tableaux contenant les textures du jeu
 const int* texturesArray[2] = {
         wallTexture,
         doorTexture
 };
+
+
+typedef struct {
+    char text[30];
+    int duration;
+} Messages;
+Messages Message;
+
+// Caractéristiques du joueur
+typedef struct {
+    float x, y, directionX, directionY, angle;
+} Players;
+Players Player;
+
+// Structure conservant les infos des touches préssées
+typedef struct {
+    int z, q, s, d, e;
+} Buttonkeys;
+Buttonkeys Keys;
+
+class Sprite {
+public:
+    bool visible;
+    int map;
+    int x, y, z;
+
+    void draw() {
+        if (visible) {
+            if (Player.x < x + 100 && Player.x > x - 100 && Player.y < y + 100 && Player.y > y - 100) {
+                if (Message.duration == 0) {
+                    strcpy_s(Message.text, "Press e to pick up the key");
+                    Message.duration = 20;
+                }
+            }
+
+            float spriteXtoPlayer = x - Player.x;   // Distance du sprite relative à celle du joueur
+            float spriteYtoPlayer = y - Player.y;
+
+            // On fait tourner le sprite autour de son centre pour toujours le voir
+            float cosAngle = cos(Player.angle);
+            float sinAngle = sin(Player.angle);
+            float tempX = spriteYtoPlayer * cosAngle + spriteXtoPlayer * sinAngle;
+            float zDepth = spriteXtoPlayer * cosAngle - spriteYtoPlayer * sinAngle;
+            spriteXtoPlayer = tempX;
+            spriteYtoPlayer = zDepth;
+
+            // transformation des coordonées sur la map en coordonnées sur l'écran (matrice de projection 3d: https://jsantell.com/3d-projection/)
+            spriteXtoPlayer = (spriteXtoPlayer * focalLength / spriteYtoPlayer) + (L / 8 / 2.0);
+            spriteYtoPlayer = (z * focalLength / spriteYtoPlayer) + (H / 8 / 2.0);
+
+            glPointSize(1);
+            if (spriteXtoPlayer > 0 && spriteXtoPlayer * 8 < L) {
+                int scale = TEXTUREWIDTH * 320 / zDepth;
+                float textureX = 0;
+                float textureY = 0;
+                float textureX_step = (float)TEXTUREWIDTH / scale;
+                float textureY_step = textureX_step;
+                for (int textureX_screen = -scale / 2; textureX_screen < scale / 2; textureX_screen++) {
+                    textureY = 0;
+                    if (zDepth - 10 < depth[int((spriteXtoPlayer * 8 + textureX_screen) / lineWidth)]) {
+                        for (int textureY_screen = 0; textureY_screen < scale; textureY_screen++) {
+                            int pixel = ((int)textureY * TEXTUREWIDTH + (int)textureX) * 3;
+                            int red = keyTexture[pixel];
+                            int green = keyTexture[pixel + 1];
+                            int blue = keyTexture[pixel + 2];
+                            if (green != 255 || red != 0 || blue != 0) {
+                                glColor3ub(red, green, blue);
+                                glBegin(GL_POINTS);
+                                glVertex2f(spriteXtoPlayer * 8 + textureX_screen, spriteYtoPlayer * 8 + textureY_screen);
+                                glEnd();
+                            }
+                            textureY += textureY_step;
+                        }
+                    }
+                    textureX += textureX_step;
+                }
+            }
+        }
+    }
+};
+Sprite KeySprite;
 
 
 /*
@@ -109,6 +154,18 @@ double overflowAngle(double angle) {
         angle += 2 * M_PI;
     }
     return angle;
+}
+
+void displayText() {
+    if (Message.duration > 0) {
+        glColor3ub(255, 255, 255);
+        glRasterPos2i(10, 30);
+        int len = strlen(Message.text);
+        for (int i = 0; i < len; i++) {
+            glutBitmapCharacter(GLUT_BITMAP_9_BY_15, Message.text[i]);
+        }
+        Message.duration--;
+    }
 }
 
 /*
@@ -127,6 +184,9 @@ void buttonDown(unsigned char key, int x, int y) {
     }
     else if (key == 'd') {
         Keys.d = 1;
+    }
+    else if (key == 'e') {
+        Keys.e = 1;
     }
 
     glutPostRedisplay();
@@ -149,6 +209,9 @@ void buttonUp(unsigned char key, int x, int y) {
     else if (key == 'd') {
         Keys.d = 0;
     }
+    else if (key == 'e') {
+        Keys.e = 0;
+    }
 
     glutPostRedisplay();
 }
@@ -159,14 +222,12 @@ Cette fonction calcule la position des murs vis-à-vis du joueur et affiche les 
 Pour ce faire, elle envoie des rayons virtuels, qui lorsque ils touchent un mur permettent de déterminer sa distance relative au joueur.
 */
 void drawWalls() {
-    int rayNb, wall, side, nbRays;
+    int rayNb, wall, side;
     unsigned int tileX, tileY, tileId;
-    float verticalRayX, verticalRayY, rayX, rayY, xOffset, yOffset, disV, disH, lineOffset, Tan, lineWidth;
+    float verticalRayX, verticalRayY, rayX, rayY, xOffset, yOffset, disV, disH, lineOffset, Tan;
     double rayAngle;
 
     rayAngle = overflowAngle(Player.angle + (FOV / 2 * ONEDEG));    // On trace le premier rayon en commençant à gauche et à un angle dépendant du champs de vision
-    nbRays = FOV * quality;                                         // Nombre de rayons à tracer en fonction du champs de vision et du niveau de détail voulu
-    lineWidth = (float)L / nbRays;                                  // Epaisseur d'une ligne pour l'affichage "3d" dépendant du nombre de lignes à tracer
 
     // Rayons
     for (rayNb = 0; rayNb < nbRays; rayNb++) {
@@ -282,6 +343,8 @@ void drawWalls() {
         double ca = overflowAngle(Player.angle - rayAngle);
         disH = disH * cos(ca);
 
+        depth[rayNb] = disH;    // On sauvegarde la distance de chaque rayon pour vérifier si le sprite est derrière un mur ou non
+
         // On prépare l'affichage des lignes verticales représentant les rayons pour le joueur
         int lineH = (TILESIZE * H) / disH;
         float textureY_step = (float)TEXTUREWIDTH / lineH;
@@ -310,7 +373,7 @@ void drawWalls() {
         else {
             textureX = (int)(rayY / 2.0) % TEXTUREWIDTH;
             // On regarde à droite, on doit donc inverser les textures
-            if (rayAngle > M_PI / 2 && rayAngle < (3.0 / 2.0 * M_PI)) {   
+            if (rayAngle > M_PI / 2 && rayAngle < (3.0 / 2.0 * M_PI)) {
                 textureX = TEXTUREWIDTH - textureX - 1;
             }
         }
@@ -329,19 +392,16 @@ void drawWalls() {
         else {
             texture = 0;
         }
-        
+
 
         glPointSize(lineWidth);
         glBegin(GL_POINTS);
 
         for (int linePixelY = 0; linePixelY < lineH; linePixelY++) {
-            // On accède à l'adresse contenant la texture désirée pour l'afficher.
-            // Pour ce faire on accède à l'adresse de la première valeur du tableau contenant la texture grâce à notre tableau de pointeurs.
-            // Ensuite on ajoute le nombre correspondant à l'indice du pixel de la texture dans le tableau pour atteindre son adresse et on utilise l'opérateur * pour accéder à la variable par sa mémoire.
-            // Le compileur s'occupe de multiplier l'indice par la taille d'un élément, ici 4 octets pour un tableau int[]
-            int red = *(texturesArray[texture] + (((int)textureY * TEXTUREWIDTH + (int)textureX) * 3)) * shading;
-            int green = *(texturesArray[texture] + (((int)textureY * TEXTUREWIDTH + (int)textureX) * 3 + 1)) * shading;
-            int blue = *(texturesArray[texture] + (((int)textureY * TEXTUREWIDTH + (int)textureX) * 3 + 2)) * shading;
+            int pixel = ((int)textureY * TEXTUREWIDTH + (int)textureX) * 3;
+            int red = *(texturesArray[texture] + pixel) * shading;
+            int green = *(texturesArray[texture] + (pixel + 1)) * shading;
+            int blue = *(texturesArray[texture] + (pixel + 2)) * shading;
             glColor3ub(red, green, blue);
             glVertex2f(rayNb * lineWidth, linePixelY + lineOffset);
             textureY += textureY_step;
@@ -358,7 +418,7 @@ void drawWalls() {
 Fonction exécutée au démarrage mettant en place l'environnement pour le joueur
 */
 void init() {
-    gluOrtho2D(0, L, H, 0); // On définit une surface pour afficher dessus
+    glClearColor(0.2, 0.2, 0.2, 0);
     // Position et angle initial du joueur
     Player.x = 150;
     Player.y = 400;
@@ -367,10 +427,10 @@ void init() {
     Player.directionX = cos(Player.angle);
     Player.directionY = -sin(Player.angle);
 
-    KeySprite.state = 1;
+    KeySprite.visible = 1;
     KeySprite.x = 1.5 * TILESIZE;
     KeySprite.y = 3 * TILESIZE;
-    KeySprite.z = 20;
+    KeySprite.z = 40;
 }
 
 
@@ -378,98 +438,128 @@ void init() {
 Fonction exécutée à chaque rafraîchissemen
 */
 void display() {
-    
+
 
     // Récuperation du nombre d'images par seconde
     frame2 = glutGet(GLUT_ELAPSED_TIME);
     fps = frame2 - frame;
     frame = glutGet(GLUT_ELAPSED_TIME);
 
-    // Gestion des inputs du joueur
-    // On tourne la vision du joueur vers la gauche
-    if (Keys.q == 1) {
-        Player.angle += 0.0015 * fps;   // La vitesse de mouvement dépends de la fréquence d'image
-        Player.angle = overflowAngle(Player.angle);
-        Player.directionX = cos(Player.angle);
-        Player.directionY = -sin(Player.angle);
-    }
-    // On tourne la vision du joueur vers la droite
-    if (Keys.d == 1) {
-        Player.angle -= 0.0015 * fps;   // La vitesse de mouvement dépends de la fréquence d'image
-        Player.angle = overflowAngle(Player.angle);
-        Player.directionX = cos(Player.angle);
-        Player.directionY = -sin(Player.angle);
-    }
-
-    int xOffset, yOffset;    // Marge contre les murs
-
-    // Si on recule
-    if (Player.directionX < 0) {
-        xOffset = -20;
-    }
-    else {
-        xOffset = 20;
-    }
-    // Si on recule
-    if (Player.directionY < 0) {
-        yOffset = -20;
-    }
-    else {
-        yOffset = 20;
-    }
-
-
-    // On veut savoir si le block situé devant nous est un mur on enregistre donc notre position dans la map avec le décalage
-    int mapPlayerPosX = Player.x / TILESIZE;
-    int mapPlayerPosX_add_xOffset = (Player.x + xOffset) / TILESIZE;
-    int mapPlayerPosX_sub_xOffset = (Player.x - xOffset) / TILESIZE;
-    int mapPlayerPosY = Player.y / TILESIZE;
-    int mapPlayerPosY_add_yOffset = (Player.y + yOffset) / TILESIZE;
-    int mapPlayerPosY_sub_yOffset = (Player.y - yOffset) / TILESIZE;
-
-
-    // On avance le joueur
-    if (Keys.z == 1) {
-        // Si la position du joueur dans la map avec le décalage ne correspond pas à un mur on peut avancer
-        if (map[mapPlayerPosY * MAPX + mapPlayerPosX_add_xOffset] == 0) {
-            Player.x += Player.directionX * 0.15 * fps;
-        }
-        if (map[mapPlayerPosY_add_yOffset * MAPX + mapPlayerPosX] == 0) {
-            Player.y += Player.directionY * 0.15 * fps;
-        }
-    }
-    // On recule le joueur
-    if (Keys.s == 1) {
-        // Si la position du joueur dans la map avec le décalage ne correspond pas à un mur on peut reculer
-        if (map[mapPlayerPosY * MAPX + mapPlayerPosX_sub_xOffset] == 0) {
-            Player.x -= Player.directionX * 0.15 * fps;
-        }
-        if (map[mapPlayerPosY_sub_yOffset * MAPX + mapPlayerPosX] == 0) {
-            Player.y -= Player.directionY * 0.15 * fps;
-        }
-    }
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // On efface complètement l'écran en laissant la couleur de fond
 
-    // Affichage du ciel et du sol (on fait deux rectangles)
-    glColor3f(0, 0.5, 0.5);
-    glBegin(GL_QUADS);
-    glVertex2i(0, 0);
-    glVertex2i(L, 0);
-    glVertex2i(L, H / 2);
-    glVertex2i(0, H / 2);
-    glEnd();
-    glColor3f(0.2, 0.2, 0.2);
-    glBegin(GL_QUADS);
-    glVertex2i(0, H / 2);
-    glVertex2i(L, H / 2);
-    glVertex2i(L, H);
-    glVertex2i(0, H);
 
-    glEnd();
-    drawWalls();            // On affiche la vision "3d"
+    if (gameState == 1) {
+        // Gestion des inputs du joueur
+        // On tourne la vision du joueur vers la gauche
+        if (Keys.q == 1) {
+            Player.angle += 0.0015 * fps;   // La vitesse de mouvement dépends de la fréquence d'image
+            Player.angle = overflowAngle(Player.angle);
+            Player.directionX = cos(Player.angle);
+            Player.directionY = -sin(Player.angle);
+        }
+        // On tourne la vision du joueur vers la droite
+        if (Keys.d == 1) {
+            Player.angle -= 0.0015 * fps;   // La vitesse de mouvement dépends de la fréquence d'image
+            Player.angle = overflowAngle(Player.angle);
+            Player.directionX = cos(Player.angle);
+            Player.directionY = -sin(Player.angle);
+        }
+
+        int xOffset, yOffset;    // Marge contre les murs
+
+        // Si on regarde vers la gauche
+        if (Player.directionX < 0) {
+            xOffset = -20;
+        }
+        else {
+            xOffset = 20;
+        }
+        // Si on regarde vers le haut
+        if (Player.directionY < 0) {
+            yOffset = -20;
+        }
+        else {
+            yOffset = 20;
+        }
+
+
+        // On veut savoir si le block situé devant nous est un mur on enregistre donc notre position dans la map avec le décalage
+        int mapPlayerPosX = Player.x / TILESIZE;
+        int mapPlayerPosX_add_xOffset = (Player.x + xOffset) / TILESIZE;
+        int mapPlayerPosX_sub_xOffset = (Player.x - xOffset) / TILESIZE;
+        int mapPlayerPosY = Player.y / TILESIZE;
+        int mapPlayerPosY_add_yOffset = (Player.y + yOffset) / TILESIZE;
+        int mapPlayerPosY_sub_yOffset = (Player.y - yOffset) / TILESIZE;
+
+
+        // On avance le joueur
+        if (Keys.z == 1) {
+            // Si la position du joueur dans la map avec le décalage ne correspond pas à un mur on peut avancer
+            if (map[mapPlayerPosY * MAPX + mapPlayerPosX_add_xOffset] == 0) {
+                Player.x += Player.directionX * 0.15 * fps;
+            }
+            if (map[mapPlayerPosY_add_yOffset * MAPX + mapPlayerPosX] == 0) {
+                Player.y += Player.directionY * 0.15 * fps;
+            }
+        }
+        // On recule le joueur
+        if (Keys.s == 1) {
+            // Si la position du joueur dans la map avec le décalage ne correspond pas à un mur on peut reculer
+            if (map[mapPlayerPosY * MAPX + mapPlayerPosX_sub_xOffset] == 0) {
+                Player.x -= Player.directionX * 0.15 * fps;
+            }
+            if (map[mapPlayerPosY_sub_yOffset * MAPX + mapPlayerPosX] == 0) {
+                Player.y -= Player.directionY * 0.15 * fps;
+            }
+        }
+
+        if (Keys.e == 1) {
+            if (Player.x < KeySprite.x + 100 && Player.x > KeySprite.x - 100 && Player.y < KeySprite.y + 100 && Player.y > KeySprite.y - 100 && KeySprite.visible) {
+                KeySprite.visible = false;
+                strcpy_s(Message.text, "You picked up the key");
+                Message.duration = 250;
+            }
+            else if (!KeySprite.visible && (map[int((Player.y + 5 * yOffset) / TILESIZE) * MAPX + mapPlayerPosX] == 2 || map[mapPlayerPosY * MAPX + int((Player.x + 5 * xOffset) / TILESIZE)] == 2)) {
+                gameState = 2;
+            }
+        }
+        if (!KeySprite.visible && (map[int((Player.y + 100 * Player.directionY) / TILESIZE) * MAPX + int((Player.x + 100 * Player.directionX) / TILESIZE)] == 2)) {
+            strcpy_s(Message.text, "Press e to open the door");
+            Message.duration = 20;
+        }
+
+        // Affichage du ciel
+        glColor3f(0, 0.5, 0.5);
+        glBegin(GL_QUADS);
+        glVertex2i(0, 0);
+        glVertex2i(L, 0);
+        glVertex2i(L, H / 2);
+        glVertex2i(0, H / 2);
+        glEnd();
+
+        drawWalls();   // On affiche la vision "3d"
+        KeySprite.draw();
+        displayText();
+    }
+    else if (gameState == 2) {
+        glClearColor(0, 0, 0, 0);
+        glPointSize(1);
+        for (int y = 0; y < 1024; y++) {
+            for (int x = 0; x < 1024; x++) {
+                int pixel = (y * 1024 + x) * 3;
+                int red = endScreen[pixel];
+                int green = endScreen[pixel + 1];
+                int blue = endScreen[pixel + 2];
+                glColor3ub(red, green, blue);
+                glBegin(GL_POINTS);
+                glVertex2i(x + 33, y);
+                glEnd();
+            }
+        }
+    }
+
     glutPostRedisplay();
-    KeySprite.draw();
-    glutSwapBuffers();      // On envoie l'image au processeur graphique
+    glutSwapBuffers();  // On échange les buffers pour afficher sur l'écran ce que l'on vient de render
 }
 
 /*
@@ -486,7 +576,9 @@ int main(int argc, char* argv[]) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
     glutInitWindowSize(L, H);                       // On initialise une fenêtre de L largeur et H hauteur
+    glutInitWindowPosition(glutGet(GLUT_SCREEN_WIDTH) / 2 - L / 2, glutGet(GLUT_SCREEN_HEIGHT) / 2 - H / 2);
     glutCreateWindow("Raycaster");                  // On crée une fenêtre avec un titre
+    gluOrtho2D(0, L, H, 0);                         // On définit une surface pour afficher dessus
     init();
     glutDisplayFunc(display);                       // On définit la fonction à appeler quand il faut rafraîchir l'écran
     glutKeyboardFunc(buttonDown);                   // On indique la fonction à appeler quand on appuie sur le clavier
