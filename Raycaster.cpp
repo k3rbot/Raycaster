@@ -431,17 +431,17 @@ void drawWalls() {
 void init() {
     glClearColor(0.2, 0.2, 0.2, 0); // On définit la couleur de l'arrière plan en gris
     // Position et angle initial du joueur
-    Player.x = 9 * TILESIZE;
-    Player.y = 14 * TILESIZE;
-    Player.angle = M_PI;
+    Player.x = 8.8 * TILESIZE;
+    Player.y = 13.8 * TILESIZE;
+    Player.angle = 1.830 * M_PI;
 
     Player.directionX = cos(Player.angle);
     Player.directionY = -sin(Player.angle);
 
     // Position et paramètres initials du sprite
     KeySprite.visible = 1;
-    KeySprite.x = 3 * TILESIZE;
-    KeySprite.y = 11 * TILESIZE;
+    KeySprite.x = 2.4 * TILESIZE;
+    KeySprite.y = 10.7 * TILESIZE;
     KeySprite.z = 40;
 }
 
